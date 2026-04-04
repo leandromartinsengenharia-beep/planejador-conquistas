@@ -380,6 +380,29 @@
   </div>
 </div>
 
+<!-- Modal Preview Imagem Instagram -->
+<div id="modal-img-post" class="modal-bg">
+  <div class="modal" style="max-width:560px">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">📸 Imagem para Instagram</h3>
+    <p style="font-size:12px;color:#64748b;margin-bottom:16px">Clique em "Baixar" e poste nos stories ou feed!</p>
+    <div style="border-radius:12px;overflow:hidden;margin-bottom:16px;border:1px solid #334155">
+      <div id="post-preview" style="width:100%;aspect-ratio:1;position:relative;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;font-family:'Segoe UI',sans-serif">
+        <!-- gerado dinamicamente -->
+      </div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-p" onclick="baixarImagemPost()" style="flex:1;padding:12px">⬇️ Baixar PNG</button>
+      <button class="btn btn-s" onclick="closeModal('modal-img-post')" style="flex:1;padding:12px">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Canvas oculto para geração da imagem 1080x1080 -->
+<div id="post-render-wrap" style="position:fixed;left:-9999px;top:-9999px;width:1080px;height:1080px;overflow:hidden">
+  <div id="post-render" style="width:1080px;height:1080px;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px;font-family:'Segoe UI',sans-serif;position:relative">
+  </div>
+</div>
+
 <!-- Modal Novo Ano -->
 <div id="modal-novo-ano" class="modal-bg">
   <div class="modal" style="max-width:520px">
@@ -1111,14 +1134,84 @@ function renderConsDeclaracao() {
         <p style="text-align:center;font-weight:800;font-size:20px;color:#a5b4fc;margin-top:8px">VITÓRIA!!! VITÓRIA!!! VITÓRIA!!!</p>
       </div>
       ${assinada
-        ? `<div style="text-align:center;padding:16px;background:#14532d;border-radius:10px;color:#86efac">
+        ? `<div style="text-align:center;padding:16px;background:#14532d;border-radius:10px;color:#86efac;margin-bottom:12px">
             <div style="font-size:24px">✅</div>
             <div style="font-weight:700;margin-top:4px">Declaração assinada em ${data}</div>
             <div style="font-size:13px;margin-top:4px">Badge "✍️ Declarado" conquistado!</div>
-           </div>`
+           </div>
+           <button class="btn btn-p" onclick="gerarImagemDeclaracao()" style="width:100%;padding:14px;font-size:15px">📸 Gerar Imagem para Instagram</button>`
         : `<button class="btn btn-p" onclick="assinarDeclaracao()" style="width:100%;padding:14px;font-size:16px">✍️ Assinar minha Declaração</button>`
       }
     </div>`
+}
+
+// ============================================================
+// GERADOR DE IMAGEM — DECLARAÇÃO PARA INSTAGRAM
+// ============================================================
+function buildPostHTML(nome, data, escala) {
+  const fs = n => `${Math.round(n * escala)}px`
+  return `
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:.06;background:repeating-linear-gradient(45deg,#fff,#fff 1px,transparent 1px,transparent 40px)"></div>
+    <div style="position:absolute;inset:${fs(24)};border:1px solid rgba(165,180,252,.3);border-radius:${fs(16)};pointer-events:none"></div>
+    <div style="position:absolute;top:${fs(44)};left:0;right:0;text-align:center">
+      <span style="font-size:${fs(22)};font-weight:900;letter-spacing:${fs(6)};color:#fff">
+        <span style="color:#818cf8">C</span><span style="color:#34d399">O</span><span style="color:#fbbf24">R</span><span style="color:#f87171">E</span>
+      </span>
+      <div style="font-size:${fs(9)};letter-spacing:${fs(3)};color:rgba(148,163,184,.8);margin-top:${fs(3)};text-transform:uppercase">Consciência · Objetivos · Resultados · Evolução</div>
+    </div>
+    <div style="text-align:center;margin-bottom:${fs(20)}">
+      <div style="font-size:${fs(11)};letter-spacing:${fs(4)};color:#a5b4fc;font-weight:700;text-transform:uppercase;margin-bottom:${fs(6)}">✨ DECLARAÇÃO</div>
+      <div style="font-size:${fs(15)};letter-spacing:${fs(2)};color:rgba(148,163,184,.8);font-weight:600">DESPERTANDO SEU POTENCIAL</div>
+    </div>
+    <div style="text-align:center;color:#e2e8f0;line-height:1.7;max-width:${fs(780)};margin:0 auto">
+      <p style="font-size:${fs(13)};margin-bottom:${fs(10)};font-style:italic">"Eu, <strong style="color:#a5b4fc">${nome}</strong>, sou o único responsável pelos meus resultados. Escolho mudar agora."</p>
+      <p style="font-size:${fs(12)};color:rgba(203,213,225,.8);margin-bottom:${fs(10)}">A riqueza, a saúde e a felicidade são meu direito divino. A sabedoria de Deus guia todos os meus passos.</p>
+      <p style="font-size:${fs(12)};color:rgba(203,213,225,.8);margin-bottom:${fs(10)}">Meus pensamentos criam minha realidade. Palavras têm poder — escolho sementes de fé, amor e esperança.</p>
+      <p style="font-size:${fs(12)};color:rgba(203,213,225,.8);margin-bottom:${fs(16)}">Não existe derrota — existem resultados e aprendizados. Persisto até conquistar tudo que mereço.</p>
+      <div style="font-size:${fs(18)};font-weight:900;color:#fff;letter-spacing:${fs(2)};margin-bottom:${fs(8)}">EU POSSO!!! EU CONSIGO!!! EU MEREÇO!!!</div>
+      <div style="font-size:${fs(22)};font-weight:900;color:#a5b4fc;letter-spacing:${fs(4)}">VITÓRIA!!!</div>
+    </div>
+    <div style="width:${fs(200)};height:1px;background:rgba(165,180,252,.4);margin:${fs(20)} auto"></div>
+    <div style="text-align:center">
+      <div style="font-size:${fs(11)};color:rgba(148,163,184,.6);margin-bottom:${fs(4)}">Assinado em ${data}</div>
+      <div style="font-size:${fs(13)};font-weight:700;color:#e2e8f0">${nome}</div>
+    </div>
+    <div style="position:absolute;bottom:${fs(36)};left:0;right:0;text-align:center">
+      <div style="font-size:${fs(11)};color:rgba(148,163,184,.7);margin-bottom:${fs(4)}">📱 @coachleandromartins &nbsp;|&nbsp; 📺 @LEANDROMARTINSCOACH</div>
+      <div style="font-size:${fs(10)};color:rgba(100,116,139,.6)">App CORE — Método Leandro Martins</div>
+    </div>`
+}
+
+function gerarImagemDeclaracao() {
+  const nome = S.perfil?.nome || 'Seu Nome'
+  const dataAssinatura = S.perfil?.declaracao_data
+    ? new Date(S.perfil.declaracao_data).toLocaleDateString('pt-BR')
+    : new Date().toLocaleDateString('pt-BR')
+  document.getElementById('post-preview').innerHTML = buildPostHTML(nome, dataAssinatura, 0.37)
+  document.getElementById('post-render').innerHTML  = buildPostHTML(nome, dataAssinatura, 1)
+  openModal('modal-img-post')
+}
+
+async function baixarImagemPost() {
+  const btn = event.target
+  btn.textContent = '⏳ Gerando...'
+  btn.disabled = true
+  try {
+    const el = document.getElementById('post-render')
+    const canvas = await html2canvas(el, {
+      width:1080, height:1080, scale:1,
+      backgroundColor:'#0f0c29', useCORS:true, logging:false
+    })
+    const link = document.createElement('a')
+    link.download = `declaracao-core-${new Date().toISOString().slice(0,10)}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+    toast('✅ Imagem baixada! Agora é só postar no Instagram 🚀')
+  } catch(e) {
+    toast('Erro ao gerar imagem: ' + e.message, false)
+  }
+  btn.textContent = '⬇️ Baixar PNG'
+  btn.disabled = false
 }
 
 async function assinarDeclaracao() {
