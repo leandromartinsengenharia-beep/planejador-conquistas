@@ -1,0 +1,1653 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Planejador de Conquistas</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Segoe UI',sans-serif;background:#0f172a;color:#e2e8f0;min-height:100vh}
+  .screen{display:none;min-height:100vh}
+  .screen.active{display:flex}
+  /* Utilitários (antes eram do Tailwind) */
+  .items-center{align-items:center}
+  .justify-center{justify-content:center}
+  .flex{display:flex}
+  .flex-col{flex-direction:column}
+  .text-center{text-align:center}
+  .mb-8{margin-bottom:32px}
+  .mb-4{margin-bottom:16px}
+  .mb-2{margin-bottom:8px}
+  .mt-4{margin-top:16px}
+  .w-full{width:100%}
+  .gap-4{gap:16px}
+  .text-sm{font-size:14px}
+  .font-bold{font-weight:700}
+  .min-h-screen{min-height:100vh}
+  .btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:14px;font-weight:600;transition:all .2s}
+  .btn-p{background:#6366f1;color:#fff}.btn-p:hover{background:#4f46e5}
+  .btn-s{background:#0f172a;color:#94a3b8;border:1px solid #334155}.btn-s:hover{background:#1e293b}
+  .btn-d{background:#dc2626;color:#fff}.btn-d:hover{background:#b91c1c}
+  .btn-g{background:#16a34a;color:#fff}.btn-g:hover{background:#15803d}
+  .btn-y{background:#d97706;color:#fff}.btn-y:hover{background:#b45309}
+  .btn:disabled{opacity:.5;cursor:default}
+  .inp{width:100%;padding:10px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;outline:none;transition:border .2s}
+  .inp:focus{border-color:#6366f1}
+  .lbl{font-size:13px;color:#94a3b8;margin-bottom:4px;display:block;font-weight:500}
+  .sel{width:100%;padding:10px 12px;background:#1e293b;border:1px solid #334155;border-radius:8px;color:#e2e8f0;font-size:14px;outline:none}
+  .sel:focus{border-color:#6366f1}
+  .card{background:#1e293b;border-radius:12px;border:1px solid #334155;padding:16px}
+  .badge{display:inline-block;padding:2px 8px;border-radius:12px;font-size:11px;font-weight:700}
+  .badge-p{background:#312e81;color:#a5b4fc}
+  .badge-g{background:#14532d;color:#86efac}
+  .badge-y{background:#451a03;color:#fcd34d}
+  .badge-r{background:#450a0a;color:#fca5a5}
+  .pbar{background:#0f172a;border-radius:999px;height:8px;overflow:hidden;margin-top:6px}
+  .pfill{height:100%;border-radius:999px;background:#6366f1;transition:width .4s}
+  .sidebar{width:220px;min-height:100vh;background:#0f172a;border-right:1px solid #1e293b;flex-shrink:0;display:flex;flex-direction:column}
+  .sitem{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;color:#94a3b8;border-radius:8px;margin:2px 8px;font-size:14px;font-weight:500;transition:all .2s}
+  .sitem:hover,.sitem.active{background:#1e293b;color:#e2e8f0}
+  .sitem.active{color:#a5b4fc}
+  .modal-bg{display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:100;align-items:center;justify-content:center}
+  .modal-bg.open{display:flex}
+  .modal{background:#1e293b;border-radius:16px;border:1px solid #334155;padding:24px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto}
+  .toast{position:fixed;top:20px;right:20px;padding:12px 20px;border-radius:10px;font-size:14px;font-weight:600;z-index:999;animation:fadeIn .3s;display:none}
+  .toast.show{display:block}
+  .toast-ok{background:#16a34a;color:#fff}
+  .toast-err{background:#dc2626;color:#fff}
+  .spinner{width:20px;height:20px;border:3px solid #334155;border-top-color:#6366f1;border-radius:50%;animation:spin 1s linear infinite;display:inline-block}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @keyframes fadeIn{from{opacity:0;transform:translateY(-8px)}to{opacity:1;transform:translateY(0)}}
+  .tab-btn{padding:8px 16px;border-radius:8px;border:none;cursor:pointer;font-size:13px;font-weight:600;background:transparent;color:#64748b;transition:all .2s}
+  .tab-btn.active{background:#6366f1;color:#fff}
+  .chk-cell{width:28px;height:28px;border-radius:6px;border:1px solid #334155;background:#0f172a;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;transition:all .2s;flex-shrink:0}
+  .chk-cell.done{background:#16a34a;border-color:#16a34a;color:#fff}
+  .chk-cell.fail{background:#dc2626;border-color:#dc2626;color:#fff}
+  .chk-cell.qty{background:#6366f1;border-color:#6366f1;color:#fff}
+  .trial-bar{background:#451a03;border-bottom:1px solid #92400e;padding:8px 16px;font-size:13px;color:#fcd34d;text-align:center}
+  textarea.inp{resize:vertical;min-height:80px}
+  @media(max-width:768px){
+    .sidebar{position:fixed;left:-220px;top:0;z-index:50;transition:left .3s}
+    .sidebar.open{left:0}
+    #mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
+    #mob-overlay.show{display:block}
+  }
+</style>
+</head>
+<body>
+
+<!-- TOAST -->
+<div id="toast" class="toast"></div>
+
+<!-- MOBILE OVERLAY -->
+<div id="mob-overlay" onclick="closeSide()"></div>
+
+<!-- ============================================================
+     TELA LOGIN
+============================================================ -->
+<div id="tela-login" class="screen active items-center justify-center">
+  <div style="width:100%;max-width:400px;padding:24px">
+    <div class="text-center mb-8">
+      <div style="font-size:48px">🎯</div>
+      <h1 style="font-size:24px;font-weight:800;color:#e2e8f0;margin-top:8px">Planejador de Conquistas</h1>
+      <p style="color:#64748b;font-size:14px;margin-top:4px">Transforme objetivos em resultados</p>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:16px">
+      <div><label class="lbl">E-mail</label><input id="lg-email" class="inp" type="email" placeholder="seu@email.com"/></div>
+      <div><label class="lbl">Senha</label><input id="lg-senha" class="inp" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"/></div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="lg-lembrar" style="width:16px;height:16px;accent-color:#6366f1;cursor:pointer"/>
+        <label for="lg-lembrar" style="font-size:13px;color:#94a3b8;cursor:pointer">Continuar logado neste computador</label>
+      </div>
+      <button class="btn btn-p" onclick="doLogin()" style="width:100%;padding:12px">Entrar</button>
+      <div style="text-align:center;font-size:13px;color:#64748b">
+        Não tem conta? <span style="color:#818cf8;cursor:pointer" onclick="go('signup')">Criar agora — 60 dias grátis</span>
+      </div>
+      <div style="text-align:center;font-size:13px">
+        <span style="color:#64748b;cursor:pointer" onclick="go('reset')">Esqueci minha senha</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     TELA SIGNUP
+============================================================ -->
+<div id="tela-signup" class="screen items-center justify-center">
+  <div style="width:100%;max-width:400px;padding:24px">
+    <div class="text-center mb-8">
+      <div style="font-size:48px">🚀</div>
+      <h1 style="font-size:24px;font-weight:800;color:#e2e8f0;margin-top:8px">Criar Conta</h1>
+      <p style="color:#64748b;font-size:14px;margin-top:4px">60 dias grátis, sem cartão</p>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:16px">
+      <div><label class="lbl">Nome</label><input id="sg-nome" class="inp" type="text" placeholder="Seu nome"/></div>
+      <div><label class="lbl">E-mail</label><input id="sg-email" class="inp" type="email" placeholder="seu@email.com"/></div>
+      <div><label class="lbl">Senha</label><input id="sg-senha" class="inp" type="password" placeholder="Mínimo 6 caracteres" onkeydown="if(event.key==='Enter')doSignup()"/></div>
+      <button class="btn btn-p" onclick="doSignup()" style="width:100%;padding:12px">Criar conta grátis</button>
+      <div style="text-align:center;font-size:13px;color:#64748b">
+        Já tem conta? <span style="color:#818cf8;cursor:pointer" onclick="go('login')">Entrar</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     TELA RESET
+============================================================ -->
+<div id="tela-reset" class="screen items-center justify-center">
+  <div style="width:100%;max-width:400px;padding:24px">
+    <div class="text-center mb-8">
+      <div style="font-size:48px">🔑</div>
+      <h1 style="font-size:24px;font-weight:800;color:#e2e8f0;margin-top:8px">Recuperar Senha</h1>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:16px">
+      <div><label class="lbl">E-mail</label><input id="rs-email" class="inp" type="email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')doReset()"/></div>
+      <button class="btn btn-p" onclick="doReset()" style="width:100%;padding:12px">Enviar link de recuperação</button>
+      <div style="text-align:center;font-size:13px">
+        <span style="color:#64748b;cursor:pointer" onclick="go('login')">Voltar ao login</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- TELA NOVA SENHA (após clicar no link de recuperação) -->
+<div id="tela-nova-senha" class="screen items-center justify-center">
+  <div style="width:100%;max-width:400px;padding:24px">
+    <div class="text-center mb-8">
+      <div style="font-size:48px">🔐</div>
+      <h1 style="font-size:24px;font-weight:800;color:#e2e8f0;margin-top:8px">Criar Nova Senha</h1>
+      <p style="color:#64748b;font-size:14px;margin-top:4px">Escolha uma senha segura</p>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;gap:16px">
+      <div><label class="lbl">Nova Senha</label><input id="ns-senha" class="inp" type="password" placeholder="Mínimo 6 caracteres"/></div>
+      <div><label class="lbl">Confirmar Senha</label><input id="ns-conf" class="inp" type="password" placeholder="Repita a senha" onkeydown="if(event.key==='Enter')doNovaSenha()"/></div>
+      <button class="btn btn-p" onclick="doNovaSenha()" style="width:100%;padding:12px">Salvar Nova Senha</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     TELA APP
+============================================================ -->
+<div id="tela-app" class="screen" style="flex-direction:column">
+  <!-- Trial bar -->
+  <div id="trial-bar" class="trial-bar" style="display:none"></div>
+
+  <div style="display:flex;flex:1;min-height:0">
+    <!-- SIDEBAR -->
+    <nav class="sidebar" id="sidebar">
+      <div style="padding:16px 16px 8px">
+        <div style="font-size:18px;font-weight:800;color:#e2e8f0">🎯 Conquistas</div>
+        <div id="user-name" style="font-size:12px;color:#64748b;margin-top:2px"></div>
+      </div>
+      <div style="flex:1;padding:8px 0">
+        <div class="sitem active" id="nav-dash" onclick="navTo('dash')">📊 Dashboard</div>
+        <div class="sitem" id="nav-cad" onclick="navTo('cad')">📋 Cadastro</div>
+        <div class="sitem" id="nav-acomp" onclick="navTo('acomp')">✅ Acompanhamento</div>
+        <div class="sitem" id="nav-rel" onclick="navTo('rel')">📄 Relatórios</div>
+        <div class="sitem" id="nav-upgrade" onclick="navTo('upgrade')">⭐ Upgrade</div>
+      </div>
+      <div style="padding:12px 8px;border-top:1px solid #1e293b">
+        <div class="sitem" onclick="abrirNovoAno()" style="color:#fbbf24">📆 Virar Ano</div>
+        <div class="sitem" onclick="doLogout()" style="color:#ef4444">🚪 Sair</div>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <main style="flex:1;overflow-y:auto;background:#0f172a;min-height:100vh">
+      <!-- Mobile header -->
+      <div style="display:none;padding:12px 16px;border-bottom:1px solid #1e293b;align-items:center;gap:12px" id="mob-header">
+        <button class="btn btn-s" style="padding:6px 10px" onclick="openSide()">☰</button>
+        <span style="font-weight:700;color:#e2e8f0">🎯 Conquistas</span>
+      </div>
+
+      <!-- SUB-SCREENS -->
+      <div id="sub-dash" style="padding:24px;display:block"></div>
+      <div id="sub-cad" style="padding:24px;display:none"></div>
+      <div id="sub-acomp" style="padding:24px;display:none"></div>
+      <div id="sub-rel" style="padding:24px;display:none"></div>
+      <div id="sub-upgrade" style="padding:24px;display:none"></div>
+    </main>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODALS
+============================================================ -->
+<!-- Modal Area -->
+<div id="modal-area" class="modal-bg">
+  <div class="modal">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:16px" id="ma-title">Nova Área</h3>
+    <input id="ma-id" type="hidden"/>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="lbl">Nome da Área</label><input id="ma-nome" class="inp" placeholder="Ex: Financeiro"/></div>
+      <div>
+        <label class="lbl">Ícone</label>
+        <div style="display:flex;gap:8px;align-items:center;margin-bottom:8px">
+          <div id="ma-icon-preview" style="width:44px;height:44px;border-radius:10px;background:#0f172a;border:2px solid #6366f1;display:flex;align-items:center;justify-content:center;font-size:24px">📌</div>
+          <input id="ma-icon" class="inp" placeholder="Cole ou digite um emoji..." style="font-size:20px;flex:1" oninput="document.getElementById('ma-icon-preview').textContent=this.value||'📌'"/>
+        </div>
+        <div style="background:#0f172a;border-radius:10px;padding:10px;border:1px solid #334155">
+          <div style="font-size:11px;color:#64748b;margin-bottom:6px;font-weight:600;text-transform:uppercase;letter-spacing:.05em">Clique para selecionar</div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <div><div style="font-size:10px;color:#6366f1;font-weight:700;margin-bottom:4px">💼 NEGÓCIOS & FINANÇAS</div><div style="display:flex;flex-wrap:wrap;gap:4px">${'💰💵💳🏦📈📉💹🤑💎🏆🥇🎯🚀💼🤝📊📋🗂️🗃️📌'.split('').map(e=>`<span onclick="selIcon('${e}')" style="font-size:20px;cursor:pointer;padding:4px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">${e}</span>`).join('')}</div></div>
+            <div><div style="font-size:10px;color:#ec4899;font-weight:700;margin-bottom:4px">🏃 SAÚDE & BEM-ESTAR</div><div style="display:flex;flex-wrap:wrap;gap:4px">${'🏃🏋️🧘🚴🥗🥦🍎💊🧠❤️🫀🏥🌿🧬🛌😴🚿🧘'.split('').map(e=>`<span onclick="selIcon('${e}')" style="font-size:20px;cursor:pointer;padding:4px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">${e}</span>`).join('')}</div></div>
+            <div><div style="font-size:10px;color:#14b8a6;font-weight:700;margin-bottom:4px">📚 APRENDIZADO & CARREIRA</div><div style="display:flex;flex-wrap:wrap;gap:4px">${'📚📖🎓🏫✏️🖊️💡🔬🔭🎨🖌️🎭🎬🎤🎵🎸🎹📝🗒️📓'.split('').map(e=>`<span onclick="selIcon('${e}')" style="font-size:20px;cursor:pointer;padding:4px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">${e}</span>`).join('')}</div></div>
+            <div><div style="font-size:10px;color:#f59e0b;font-weight:700;margin-bottom:4px">🏠 VIDA PESSOAL & FAMÍLIA</div><div style="display:flex;flex-wrap:wrap;gap:4px">${'🏠🏡👨‍👩‍👧‍👦❤️💑🛒🍳🧹🪴🐶🐱✈️🏖️🎉🎂🎁🤲🙏🌟⭐'.split('').map(e=>`<span onclick="selIcon('${e}')" style="font-size:20px;cursor:pointer;padding:4px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">${e}</span>`).join('')}</div></div>
+            <div><div style="font-size:10px;color:#22c55e;font-weight:700;margin-bottom:4px">📱 TECNOLOGIA & MARKETING</div><div style="display:flex;flex-wrap:wrap;gap:4px">${'💻📱⌨️🖥️📡🔧⚙️🤖🧩🌐📲📸🎥📹📡📢📣🔔💬📧'.split('').map(e=>`<span onclick="selIcon('${e}')" style="font-size:20px;cursor:pointer;padding:4px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">${e}</span>`).join('')}</div></div>
+            <div><div style="font-size:10px;color:#8b5cf6;font-weight:700;margin-bottom:4px">🌱 METAS & CONQUISTAS</div><div style="display:flex;flex-wrap:wrap;gap:4px">${'🌱🌿🌳🔥⚡🎯🏹🧲💪👊🤜✅☑️🔑🗝️🚪🛤️🏔️🌄🌅'.split('').map(e=>`<span onclick="selIcon('${e}')" style="font-size:20px;cursor:pointer;padding:4px;border-radius:6px;transition:background .15s" onmouseover="this.style.background='#1e293b'" onmouseout="this.style.background='transparent'">${e}</span>`).join('')}</div></div>
+          </div>
+        </div>
+      </div>
+      <div><label class="lbl">Cor</label>
+        <select id="ma-cor" class="sel">
+          <option value="#6366f1">Índigo</option>
+          <option value="#ec4899">Rosa</option>
+          <option value="#14b8a6">Verde-água</option>
+          <option value="#f59e0b">Âmbar</option>
+          <option value="#22c55e">Verde</option>
+          <option value="#ef4444">Vermelho</option>
+          <option value="#8b5cf6">Violeta</option>
+          <option value="#06b6d4">Ciano</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-p" onclick="svA()" style="flex:1">Salvar</button>
+        <button class="btn btn-s" onclick="closeModal('modal-area')" style="flex:1">Cancelar</button>
+      </div>
+      <button class="btn btn-d" id="ma-del" onclick="dA()" style="display:none;width:100%">Excluir Área</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Objetivo -->
+<div id="modal-obj" class="modal-bg">
+  <div class="modal">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:16px" id="mo-title">Novo Objetivo</h3>
+    <input id="mo-id" type="hidden"/>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="lbl">Área</label>
+        <select id="mo-area" class="sel"></select>
+      </div>
+      <div><label class="lbl">Nome do Objetivo</label><input id="mo-nome" class="inp" placeholder="Ex: Vender 2 Milhões"/></div>
+      <div><label class="lbl">Descrição (opcional)</label><textarea id="mo-desc" class="inp"></textarea></div>
+      <div><label class="lbl">Tipo de Objetivo</label>
+        <select id="mo-tipo-obj" class="sel" onchange="onTipoObjChg()">
+          <option value="unico">🎯 Único — tem data de início e fim</option>
+          <option value="mensal">📅 Recorrente mensal — repete todo mês</option>
+          <option value="anual">📆 Recorrente anual — meta do ano</option>
+        </select>
+        <div id="mo-tipo-desc" style="font-size:12px;color:#64748b;margin-top:4px;padding:6px 10px;background:#0f172a;border-radius:6px">🎯 Objetivo com prazo definido — ex: Vender 2M até dezembro</div>
+      </div>
+      <div id="mo-datas-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label class="lbl">Início</label><input id="mo-ini" class="inp" type="date"/></div>
+        <div id="mo-fim-wrap"><label class="lbl" id="mo-fim-lbl">Término</label><input id="mo-fim" class="inp" type="date"/></div>
+      </div>
+      <div id="mo-auto-fim-info" style="display:none;font-size:12px;color:#64748b;padding:6px 10px;background:#0f172a;border-radius:6px">📅 Término automático: 31/12 do ano de início</div>
+      <div><label class="lbl">Prioridade</label>
+        <select id="mo-prio" class="sel">
+          <option value="alta">🔴 Alta</option>
+          <option value="media">🟡 Média</option>
+          <option value="baixa">🟢 Baixa</option>
+        </select>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-p" onclick="svO()" style="flex:1">Salvar</button>
+        <button class="btn btn-s" onclick="closeModal('modal-obj')" style="flex:1">Cancelar</button>
+      </div>
+      <button class="btn btn-d" id="mo-del" onclick="dO()" style="display:none;width:100%">Excluir Objetivo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Meta -->
+<div id="modal-meta" class="modal-bg">
+  <div class="modal">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:16px" id="mm-title">Nova Meta</h3>
+    <input id="mm-id" type="hidden"/>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="lbl">Objetivo</label>
+        <select id="mm-obj" class="sel"></select>
+      </div>
+      <div><label class="lbl">Nome da Meta</label><input id="mm-nome" class="inp" placeholder="Ex: Fazer 20 visitas"/></div>
+      <div><label class="lbl">Recorrência</label>
+        <select id="mm-recorr" class="sel" onchange="onRecorrChg()">
+          <option value="mensal">📅 Recorrente mensal — se repete todo mês</option>
+          <option value="unico">🎯 Única — tem data de conclusão</option>
+          <option value="anual">📆 Recorrente anual — acompanhamento anual</option>
+        </select>
+      </div>
+      <div><label class="lbl">Tipo de Controle</label>
+        <select id="mm-tipo" class="sel" onchange="onTipoChg()">
+          <option value="dias">📅 Dias (✓/✗) — marcar presença diária</option>
+          <option value="quantidade">🔢 Quantidade — registrar número realizado</option>
+          <option value="moeda">💰 Valor em R$ — registrar valor financeiro</option>
+        </select>
+      </div>
+      <div id="mm-qty-wrap" style="display:none">
+        <label class="lbl" id="mm-qty-lbl">Meta</label>
+        <div style="display:flex;align-items:center;gap:8px">
+          <span id="mm-qty-prefix" style="color:#64748b;font-size:14px;white-space:nowrap"></span>
+          <input id="mm-qty" class="inp" type="number" min="0" step="0.01" placeholder="Ex: 20"/>
+        </div>
+      </div>
+      <div id="mm-datas-wrap" style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><label class="lbl">Início</label><input id="mm-ini" class="inp" type="date"/></div>
+        <div id="mm-fim-wrap"><label class="lbl" id="mm-fim-lbl">Término</label><input id="mm-fim" class="inp" type="date"/></div>
+      </div>
+      <div id="mm-auto-fim-info" style="display:none;font-size:12px;color:#64748b;padding:6px 10px;background:#0f172a;border-radius:6px">📅 Término automático: 31/12 do ano de início</div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-p" onclick="svM()" style="flex:1">Salvar</button>
+        <button class="btn btn-s" onclick="closeModal('modal-meta')" style="flex:1">Cancelar</button>
+      </div>
+      <button class="btn btn-d" id="mm-del" onclick="dM()" style="display:none;width:100%">Excluir Meta</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Novo Ano -->
+<div id="modal-novo-ano" class="modal-bg">
+  <div class="modal" style="max-width:520px">
+    <h3 style="font-size:18px;font-weight:700;margin-bottom:4px">📆 Copiar para Novo Ano</h3>
+    <p style="font-size:13px;color:#64748b;margin-bottom:16px">Selecione o que deseja copiar para <strong id="nya-ano-dest" style="color:#a5b4fc"></strong></p>
+    <div id="nya-lista" style="display:flex;flex-direction:column;gap:8px;max-height:400px;overflow-y:auto;margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-p" onclick="confirmarNovoAno()" style="flex:1">✅ Copiar Selecionados</button>
+      <button class="btn btn-s" onclick="closeModal('modal-novo-ano')" style="flex:1">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal Check-in Quantidade -->
+<div id="modal-qty" class="modal-bg">
+  <div class="modal" style="max-width:320px">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:12px" id="mq-title">Registrar Quantidade</h3>
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div><label class="lbl">Valor realizado</label><input id="mq-val" class="inp" type="number" min="0" placeholder="0"/></div>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-p" onclick="svChkQ()" style="flex:1">Salvar</button>
+        <button class="btn btn-s" onclick="closeModal('modal-qty')" style="flex:1">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// CONFIG — PREENCHA COM SEUS DADOS DO SUPABASE
+// ============================================================
+const SUPA_URL = 'https://kiffveeuscedybojzidr.supabase.co'
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtpZmZ2ZWV1c2NlZHlib2p6aWRyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUxODY4MTMsImV4cCI6MjA5MDc2MjgxM30.3BkMFuCZJUfg3TeOSAL4Txcx1vtcGsWTuGSLNgSdZws'
+
+// ============================================================
+// INIT SUPABASE
+// ============================================================
+const { createClient } = window.supabase
+const db = createClient(SUPA_URL, SUPA_KEY)
+
+// ============================================================
+// STATE
+// ============================================================
+const S = {
+  tela: 'login',
+  user: null,
+  perfil: null,
+  areas: [],
+  objs: [],
+  metas: [],
+  chks: [],
+  mes: new Date().getMonth() + 1,
+  ano: new Date().getFullYear(),
+  sub: 'dash',
+  abaC: 'areas',  // tab cadastro
+  fObj: null,     // filtro objetivo no acompanhamento
+  chartD: null,   // chart dash
+  chartR: null,   // chart relatorio
+  _mqMeta: null,
+  _mqDia: null,
+}
+
+// ============================================================
+// NAV UTILS
+// ============================================================
+function go(tela) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'))
+  document.getElementById('tela-' + tela).classList.add('active')
+  S.tela = tela
+}
+
+function navTo(sub) {
+  document.querySelectorAll('[id^=sub-]').forEach(el => el.style.display = 'none')
+  document.getElementById('sub-' + sub).style.display = 'block'
+  document.querySelectorAll('.sitem').forEach(el => el.classList.remove('active'))
+  document.getElementById('nav-' + sub).classList.add('active')
+  S.sub = sub
+  if (sub === 'dash') rdD()
+  else if (sub === 'cad') rdC()
+  else if (sub === 'acomp') rdA()
+  else if (sub === 'rel') rdR()
+  else if (sub === 'upgrade') rdUpgrade()
+}
+
+function openSide() {
+  document.getElementById('sidebar').classList.add('open')
+  document.getElementById('mob-overlay').classList.add('show')
+}
+function closeSide() {
+  document.getElementById('sidebar').classList.remove('open')
+  document.getElementById('mob-overlay').classList.remove('show')
+}
+
+function openModal(id) { document.getElementById(id).classList.add('open') }
+function closeModal(id) { document.getElementById(id).classList.remove('open') }
+
+function toast(msg, ok = true) {
+  const t = document.getElementById('toast')
+  t.textContent = msg
+  t.className = 'toast show ' + (ok ? 'toast-ok' : 'toast-err')
+  clearTimeout(t._t)
+  t._t = setTimeout(() => t.classList.remove('show'), 3000)
+}
+
+// ============================================================
+// AUTH
+// ============================================================
+async function doLogin() {
+  const email = document.getElementById('lg-email').value.trim()
+  const senha = document.getElementById('lg-senha').value
+  const lembrar = document.getElementById('lg-lembrar').checked
+  if (!email || !senha) { toast('Preencha e-mail e senha', false); return }
+  const { data, error } = await db.auth.signInWithPassword({ email, password: senha })
+  if (error) { toast(error.message, false); return }
+  if (lembrar) localStorage.setItem('pc_remember', '1')
+  else localStorage.removeItem('pc_remember')
+  sessionStorage.setItem('pc_session', '1')
+  S.user = data.user
+  await afterLogin()
+}
+
+async function doSignup() {
+  const nome = document.getElementById('sg-nome').value.trim()
+  const email = document.getElementById('sg-email').value.trim()
+  const senha = document.getElementById('sg-senha').value
+  if (!nome || !email || !senha) { toast('Preencha todos os campos', false); return }
+  if (senha.length < 6) { toast('Senha mínimo 6 caracteres', false); return }
+  const { data, error } = await db.auth.signUp({ email, password: senha, options: { data: { nome } } })
+  if (error) { toast(error.message, false); return }
+  // insert perfil
+  if (data.user) {
+    await db.from('usuarios').upsert({ id: data.user.id, nome, email, plano: 'trial', criado_em: new Date().toISOString() })
+    S.user = data.user
+    await afterLogin()
+  } else {
+    toast('Verifique seu e-mail para confirmar o cadastro', true)
+    go('login')
+  }
+}
+
+async function doReset() {
+  const email = document.getElementById('rs-email').value.trim()
+  if (!email) { toast('Informe o e-mail', false); return }
+  // Garante que a URL não termina em index.html (Supabase precisa bater com Site URL)
+  let redirectTo = window.location.origin + window.location.pathname
+  if (redirectTo.endsWith('index.html')) redirectTo = redirectTo.replace('index.html', '')
+  const { error } = await db.auth.resetPasswordForEmail(email, { redirectTo })
+  if (error) { toast(error.message, false); return }
+  toast('Link enviado! Verifique seu e-mail — o link vai abrir esta página')
+  go('login')
+}
+
+async function doNovaSenha() {
+  const senha = document.getElementById('ns-senha').value
+  const conf = document.getElementById('ns-conf').value
+  if (!senha || senha.length < 6) { toast('Senha mínimo 6 caracteres', false); return }
+  if (senha !== conf) { toast('As senhas não conferem', false); return }
+  const { error } = await db.auth.updateUser({ password: senha })
+  if (error) { toast('Erro: ' + error.message, false); return }
+  toast('Senha atualizada! Redirecionando...')
+  sessionStorage.setItem('pc_session', '1')
+  await afterLogin()
+}
+
+// ============================================================
+// VIRAR ANO — Copiar áreas/objetivos/metas para novo ano
+// ============================================================
+function abrirNovoAno() {
+  const anoAtual = new Date().getFullYear()
+  const anoDest = anoAtual + 1
+  document.getElementById('nya-ano-dest').textContent = anoDest
+  const lista = document.getElementById('nya-lista')
+  // Monta lista agrupada: área > objetivos > metas
+  let html = ''
+  S.areas.forEach(a => {
+    const objs = S.objs.filter(o => o.area_id === a.id && (o.tipo_obj === 'mensal' || o.tipo_obj === 'anual'))
+    if (!objs.length) return
+    html += `<div style="background:#0f172a;border-radius:10px;padding:10px 12px;border:1px solid #334155">
+      <label style="display:flex;align-items:center;gap:8px;font-weight:700;font-size:14px;cursor:pointer">
+        <input type="checkbox" class="nya-area" data-id="${a.id}" checked style="width:16px;height:16px;accent-color:#6366f1"/>
+        ${a.icon||'📌'} ${a.nome}
+      </label>`
+    objs.forEach(o => {
+      const metas = S.metas.filter(m => m.obj_id === o.id && (m.recorrencia === 'mensal' || m.recorrencia === 'anual'))
+      html += `<div style="margin-left:20px;margin-top:6px">
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;color:#a5b4fc;cursor:pointer">
+          <input type="checkbox" class="nya-obj" data-id="${o.id}" data-area="${a.id}" checked style="width:14px;height:14px;accent-color:#6366f1"/>
+          📌 ${o.nome} <span style="font-size:11px;color:#64748b">(${o.tipo_obj})</span>
+        </label>`
+      metas.forEach(m => {
+        html += `<div style="margin-left:20px;margin-top:4px">
+          <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#94a3b8;cursor:pointer">
+            <input type="checkbox" class="nya-meta" data-id="${m.id}" data-obj="${o.id}" checked style="width:12px;height:12px;accent-color:#6366f1"/>
+            ✅ ${m.nome} <span style="font-size:11px;color:#64748b">(${m.recorrencia})</span>
+          </label>
+        </div>`
+      })
+      html += `</div>`
+    })
+    html += `</div>`
+  })
+  if (!html) {
+    lista.innerHTML = '<p style="color:#64748b;text-align:center;padding:20px">Nenhum objetivo/meta recorrente encontrado.<br>Apenas objetivos/metas do tipo <strong>mensal</strong> ou <strong>anual</strong> podem ser copiados.</p>'
+  } else {
+    lista.innerHTML = html
+  }
+  openModal('modal-novo-ano')
+}
+
+async function confirmarNovoAno() {
+  const anoAtual = new Date().getFullYear()
+  const anoDest = anoAtual + 1
+  const uid = S.user.id
+  // Coleta selecionados
+  const objsSel = [...document.querySelectorAll('.nya-obj:checked')].map(el => el.dataset.id)
+  const metasSel = [...document.querySelectorAll('.nya-meta:checked')].map(el => el.dataset.id)
+  if (!objsSel.length && !metasSel.length) { toast('Selecione ao menos um item', false); return }
+
+  let criados = 0
+  // Mapa de obj antigo → novo id (para vincular metas)
+  const objMap = {}
+
+  for (const objId of objsSel) {
+    const obj = S.objs.find(o => o.id === objId)
+    if (!obj) continue
+    // Atualiza datas para o novo ano
+    const iniAno = obj.inicio ? obj.inicio.replace(/^\d{4}/, anoDest) : `${anoDest}-01-01`
+    const fimAno = `${anoDest}-12-31`
+    const { data, error } = await db.from('objetivos').insert({
+      area_id: obj.area_id, user_id: uid,
+      nome: obj.nome, descricao: obj.descricao,
+      tipo_obj: obj.tipo_obj, prioridade: obj.prioridade,
+      inicio: iniAno, fim: fimAno
+    }).select().single()
+    if (!error && data) { objMap[objId] = data.id; criados++ }
+  }
+
+  for (const metaId of metasSel) {
+    const meta = S.metas.find(m => m.id === metaId)
+    if (!meta) continue
+    const novoObjId = objMap[meta.obj_id] || meta.obj_id
+    const iniAno = meta.inicio ? meta.inicio.replace(/^\d{4}/, anoDest) : `${anoDest}-01-01`
+    const fimAno = `${anoDest}-12-31`
+    const { error } = await db.from('metas').insert({
+      obj_id: novoObjId, user_id: uid,
+      nome: meta.nome, recorrencia: meta.recorrencia,
+      tipo: meta.tipo, qtd_meta: meta.qtd_meta,
+      inicio: iniAno, fim: fimAno
+    })
+    if (!error) criados++
+  }
+
+  closeModal('modal-novo-ano')
+  await loadAll()
+  rdC()
+  toast(`✅ ${criados} itens copiados para ${anoDest}!`)
+}
+
+async function doLogout() {
+  if (!confirm('Deseja sair do Planejador de Conquistas?')) return
+  localStorage.removeItem('pc_remember')
+  sessionStorage.removeItem('pc_session')
+  await db.auth.signOut()
+  S.user = null; S.perfil = null
+  go('login')
+}
+
+async function afterLogin() {
+  // load perfil
+  const { data } = await db.from('usuarios').select('*').eq('id', S.user.id).single()
+  S.perfil = data
+  const nome = S.perfil?.nome || S.user.email
+  document.getElementById('user-name').textContent = nome
+  // show trial bar
+  const dias = diasTrial()
+  const tb = document.getElementById('trial-bar')
+  if (S.perfil?.plano === 'trial') {
+    tb.style.display = 'block'
+    if (dias > 0) tb.textContent = `⏳ Período de teste: ${dias} dia${dias !== 1 ? 's' : ''} restante${dias !== 1 ? 's' : ''} — Faça upgrade para continuar após o vencimento`
+    else { tb.textContent = '⚠️ Seu período gratuito encerrou. Faça o upgrade para continuar usando.'; tb.style.background = '#450a0a'; tb.style.borderColor = '#991b1b'; tb.style.color = '#fca5a5' }
+  } else tb.style.display = 'none'
+  go('app')
+  await loadAll()
+  navTo('dash')
+}
+
+// ============================================================
+// LICENSE
+// ============================================================
+function diasTrial() {
+  if (!S.perfil?.criado_em) return 60
+  const criado = new Date(S.perfil.criado_em)
+  const diff = Math.floor((Date.now() - criado.getTime()) / 86400000)
+  return Math.max(0, 60 - diff)
+}
+function licOk() {
+  if (S.perfil?.plano === 'ativo') return true
+  return diasTrial() > 0
+}
+
+// ============================================================
+// LOAD DATA
+// ============================================================
+async function loadAll() {
+  const uid = S.user.id
+  const [ra, ro, rm] = await Promise.all([
+    db.from('areas').select('*').eq('user_id', uid).order('created_at'),
+    db.from('objetivos').select('*').eq('user_id', uid).order('created_at'),
+    db.from('metas').select('*').eq('user_id', uid).order('created_at'),
+  ])
+  S.areas = ra.data || []
+  S.objs = ro.data || []
+  S.metas = rm.data || []
+  await rcChk()
+}
+
+async function rcChk() {
+  const uid = S.user.id
+  const ym = `${S.ano}-${String(S.mes).padStart(2,'0')}`
+  const { data } = await db.from('checkins').select('*').eq('user_id', uid).like('data', ym + '%')
+  S.chks = data || []
+}
+
+// ============================================================
+// RENDER DASHBOARD
+// ============================================================
+function rdD() {
+  const el = document.getElementById('sub-dash')
+  const totalObjs = S.objs.length
+  const totalMetas = S.metas.length
+  const mNome = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][S.mes-1]
+
+  // calc progress per area
+  const areaStats = S.areas.map(a => {
+    const objs = S.objs.filter(o => o.area_id === a.id)
+    const metas = S.metas.filter(m => objs.some(o => o.id === m.obj_id))
+    let total = 0, feito = 0
+    metas.forEach(m => {
+      const chks = S.chks.filter(c => c.meta_id === m.id)
+      if (m.tipo === 'dias') {
+        const dias = diasDoMes(S.ano, S.mes)
+        total += dias
+        feito += chks.filter(c => c.status === 'ok').length
+      } else {
+        const meta = m.qtd_meta || 1
+        total += meta
+        feito += chks.reduce((s, c) => s + (c.qtd || 0), 0)
+      }
+    })
+    const pct = total > 0 ? Math.min(100, Math.round(feito / total * 100)) : 0
+    return { ...a, pct, objs: objs.length, metas: metas.length }
+  })
+
+  // overall pct
+  const overallPct = areaStats.length > 0 ? Math.round(areaStats.reduce((s,a) => s + a.pct, 0) / areaStats.length) : 0
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <h2 style="font-size:20px;font-weight:800">📊 Dashboard</h2>
+      <div style="display:flex;align-items:center;gap:8px">
+        <select class="sel" style="width:auto" onchange="S.mes=+this.value;rcChk().then(()=>{rdD()})">
+          ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}" ${m===S.mes?'selected':''}>${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m-1]}</option>`).join('')}
+        </select>
+        <select class="sel" style="width:auto" onchange="S.ano=+this.value;rcChk().then(()=>{rdD()})">
+          ${[2024,2025,2026,2027].map(y=>`<option value="${y}" ${y===S.ano?'selected':''}>${y}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <!-- Stats cards -->
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:16px;margin-bottom:24px">
+      <div class="card" style="text-align:center">
+        <div style="font-size:32px;font-weight:800;color:#a5b4fc">${overallPct}%</div>
+        <div style="font-size:13px;color:#64748b;margin-top:4px">Realização ${mNome}</div>
+        <div class="pbar" style="margin-top:8px"><div class="pfill" style="width:${overallPct}%"></div></div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:32px;font-weight:800;color:#86efac">${S.areas.length}</div>
+        <div style="font-size:13px;color:#64748b;margin-top:4px">Áreas</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:32px;font-weight:800;color:#fcd34d">${totalObjs}</div>
+        <div style="font-size:13px;color:#64748b;margin-top:4px">Objetivos</div>
+      </div>
+      <div class="card" style="text-align:center">
+        <div style="font-size:32px;font-weight:800;color:#f9a8d4">${totalMetas}</div>
+        <div style="font-size:13px;color:#64748b;margin-top:4px">Metas</div>
+      </div>
+    </div>
+    <!-- Areas progress -->
+    <div style="margin-bottom:24px">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">Progresso por Área</h3>
+      ${areaStats.length === 0 ? '<div class="card" style="text-align:center;color:#64748b;padding:32px">Nenhuma área cadastrada. <span style="color:#818cf8;cursor:pointer" onclick="navTo(\'cad\')">Adicionar área →</span></div>' :
+        areaStats.map(a => `
+          <div class="card" style="margin-bottom:12px">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:20px">${a.icon || '📌'}</span>
+                <div>
+                  <div style="font-weight:600">${a.nome}</div>
+                  <div style="font-size:12px;color:#64748b">${a.objs} objetivo${a.objs !== 1 ? 's' : ''} · ${a.metas} meta${a.metas !== 1 ? 's' : ''}</div>
+                </div>
+              </div>
+              <div style="font-size:18px;font-weight:800;color:${a.cor || '#6366f1'}">${a.pct}%</div>
+            </div>
+            <div class="pbar"><div class="pfill" style="width:${a.pct}%;background:${a.cor || '#6366f1'}"></div></div>
+          </div>`).join('')}
+    </div>
+    <!-- Chart -->
+    <div class="card" style="margin-bottom:24px">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:16px">Progresso por Área — Gráfico</h3>
+      <canvas id="chart-dash" height="80"></canvas>
+    </div>
+    <!-- Recent activity -->
+    <div class="card">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">Metas com mais check-ins hoje</h3>
+      ${topMetas()}
+    </div>
+  `
+  // draw chart
+  const ctx = document.getElementById('chart-dash')
+  if (!ctx) return
+  if (S.chartD) S.chartD.destroy()
+  S.chartD = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: areaStats.map(a => (a.icon || '') + ' ' + a.nome),
+      datasets: [{
+        label: 'Realização %',
+        data: areaStats.map(a => a.pct),
+        backgroundColor: areaStats.map(a => (a.cor || '#6366f1') + 'cc'),
+        borderColor: areaStats.map(a => a.cor || '#6366f1'),
+        borderWidth: 2,
+        borderRadius: 6,
+      }]
+    },
+    options: {
+      responsive: true,
+      plugins: { legend: { display: false } },
+      scales: {
+        y: { beginAtZero: true, max: 100, grid: { color: '#1e293b' }, ticks: { color: '#64748b', callback: v => v + '%' } },
+        x: { grid: { color: '#1e293b' }, ticks: { color: '#94a3b8' } }
+      }
+    }
+  })
+}
+
+function topMetas() {
+  const hoje = new Date().toISOString().slice(0, 10)
+  const hojChks = S.chks.filter(c => c.data === hoje)
+  if (hojChks.length === 0) return '<div style="color:#64748b;font-size:14px">Nenhum check-in hoje. <span style="color:#818cf8;cursor:pointer" onclick="navTo(\'acomp\')">Ir para Acompanhamento →</span></div>'
+  const lines = hojChks.slice(0, 5).map(c => {
+    const m = S.metas.find(x => x.id === c.meta_id)
+    const o = m ? S.objs.find(x => x.id === m.obj_id) : null
+    return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #334155">
+      <span style="color:${c.status==='ok'?'#22c55e':'#ef4444'};font-size:16px">${c.status==='ok'?'✓':'✗'}</span>
+      <div>
+        <div style="font-size:14px;font-weight:500">${m?.nome || '—'}</div>
+        <div style="font-size:12px;color:#64748b">${o?.nome || '—'}</div>
+      </div>
+      ${c.qtd ? `<span class="badge badge-p" style="margin-left:auto">${c.qtd}</span>` : ''}
+    </div>`
+  }).join('')
+  return lines
+}
+
+// ============================================================
+// RENDER CADASTRO
+// ============================================================
+function rdC() {
+  const el = document.getElementById('sub-cad')
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <h2 style="font-size:20px;font-weight:800">📋 Cadastro</h2>
+    </div>
+    <!-- Tabs -->
+    <div style="display:flex;gap:4px;margin-bottom:20px;background:#1e293b;padding:4px;border-radius:10px;width:fit-content">
+      <button class="tab-btn ${S.abaC==='areas'?'active':''}" onclick="aba('areas')">Áreas</button>
+      <button class="tab-btn ${S.abaC==='objs'?'active':''}" onclick="aba('objs')">Objetivos</button>
+      <button class="tab-btn ${S.abaC==='metas'?'active':''}" onclick="aba('metas')">Metas</button>
+    </div>
+    <div id="cad-content"></div>
+  `
+  rdCContent()
+}
+
+function aba(tab) {
+  S.abaC = tab
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'))
+  document.querySelectorAll('.tab-btn').forEach(b => { if (b.textContent.toLowerCase().startsWith(tab === 'areas' ? 'á' : tab === 'objs' ? 'o' : 'm')) b.classList.add('active') })
+  rdCContent()
+}
+
+function rdCContent() {
+  const el = document.getElementById('cad-content')
+  if (!el) return
+  if (S.abaC === 'areas') {
+    el.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-p" onclick="abrirArea(null)">+ Nova Área</button>
+      </div>
+      ${S.areas.length === 0 ? '<div class="card" style="text-align:center;color:#64748b;padding:32px">Nenhuma área. Crie sua primeira!</div>' :
+        S.areas.map(a => `
+          <div class="card" style="margin-bottom:10px;display:flex;align-items:center;justify-content:space-between">
+            <div style="display:flex;align-items:center;gap:10px">
+              <span style="width:36px;height:36px;border-radius:8px;background:${a.cor || '#6366f1'}22;display:flex;align-items:center;justify-content:center;font-size:20px">${a.icon || '📌'}</span>
+              <div>
+                <div style="font-weight:600">${a.nome}</div>
+                <div style="font-size:12px;color:#64748b">${S.objs.filter(o=>o.area_id===a.id).length} objetivos</div>
+              </div>
+            </div>
+            <button class="btn btn-s" style="padding:6px 12px;font-size:12px" onclick="abrirArea('${a.id}')">✏️ Editar</button>
+          </div>`).join('')}
+    `
+  } else if (S.abaC === 'objs') {
+    el.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-p" onclick="abrirObj(null)">+ Novo Objetivo</button>
+      </div>
+      ${S.areas.length === 0 ? '<div class="card" style="text-align:center;color:#64748b;padding:32px">Crie uma área primeiro.</div>' :
+        S.objs.length === 0 ? '<div class="card" style="text-align:center;color:#64748b;padding:32px">Nenhum objetivo. Crie o primeiro!</div>' :
+        S.areas.map(a => {
+          const obs = S.objs.filter(o => o.area_id === a.id)
+          if (obs.length === 0) return ''
+          return `
+            <div style="margin-bottom:16px">
+              <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">${a.icon || ''} ${a.nome}</div>
+              ${obs.map(o => `
+                <div class="card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+                  <div>
+                    <div style="font-weight:600">${o.nome}</div>
+                    <div style="font-size:12px;color:#64748b">${S.metas.filter(m=>m.obj_id===o.id).length} metas · <span class="badge badge-${o.prioridade==='alta'?'r':o.prioridade==='media'?'y':'g'}">${o.prioridade||'média'}</span></div>
+                  </div>
+                  <button class="btn btn-s" style="padding:6px 12px;font-size:12px" onclick="abrirObj('${o.id}')">✏️ Editar</button>
+                </div>`).join('')}
+            </div>`
+        }).join('')}
+    `
+  } else {
+    el.innerHTML = `
+      <div style="display:flex;justify-content:flex-end;margin-bottom:12px">
+        <button class="btn btn-p" onclick="abrirMeta(null)">+ Nova Meta</button>
+      </div>
+      ${S.objs.length === 0 ? '<div class="card" style="text-align:center;color:#64748b;padding:32px">Crie um objetivo primeiro.</div>' :
+        S.metas.length === 0 ? '<div class="card" style="text-align:center;color:#64748b;padding:32px">Nenhuma meta. Crie a primeira!</div>' :
+        S.objs.map(o => {
+          const ms = S.metas.filter(m => m.obj_id === o.id)
+          if (ms.length === 0) return ''
+          const a = S.areas.find(x => x.id === o.area_id)
+          return `
+            <div style="margin-bottom:16px">
+              <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:8px">${a?.icon||''} ${a?.nome||''} › ${o.nome}</div>
+              ${ms.map(m => `
+                <div class="card" style="margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+                  <div>
+                    <div style="font-weight:600">${m.nome}</div>
+                    <div style="font-size:12px;color:#64748b">${m.tipo === 'quantidade' ? '📊 Quantidade · Meta: ' + (m.qtd_meta||0) : '📅 Dias (✓/✗)'}</div>
+                  </div>
+                  <button class="btn btn-s" style="padding:6px 12px;font-size:12px" onclick="abrirMeta('${m.id}')">✏️ Editar</button>
+                </div>`).join('')}
+            </div>`
+        }).join('')}
+    `
+  }
+}
+
+// ============================================================
+// RENDER ACOMPANHAMENTO
+// ============================================================
+function rdA() {
+  const el = document.getElementById('sub-acomp')
+  const dias = diasDoMes(S.ano, S.mes)
+  const dNums = Array.from({length: dias}, (_, i) => i + 1)
+  const hoje = new Date().getDate()
+  const mNome = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][S.mes-1]
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <h2 style="font-size:20px;font-weight:800">✅ Acompanhamento — ${mNome} ${S.ano}</h2>
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <select class="sel" style="width:auto" onchange="S.mes=+this.value;rcChk().then(()=>rdA())">
+          ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}" ${m===S.mes?'selected':''}>${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m-1]}</option>`).join('')}
+        </select>
+        <select class="sel" style="width:auto" onchange="S.ano=+this.value;rcChk().then(()=>rdA())">
+          ${[2024,2025,2026,2027].map(y=>`<option value="${y}" ${y===S.ano?'selected':''}>${y}</option>`).join('')}
+        </select>
+        <select class="sel" style="width:auto" onchange="S.fObj=this.value||null;rdA()">
+          <option value="">Todos objetivos</option>
+          ${S.objs.map(o=>`<option value="${o.id}" ${S.fObj===o.id?'selected':''}>${o.nome}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    ${S.metas.length === 0 ? '<div class="card" style="text-align:center;color:#64748b;padding:40px">Nenhuma meta cadastrada. <span style="color:#818cf8;cursor:pointer" onclick="navTo(\'cad\')">Ir para Cadastro →</span></div>' : ''}
+    ${renderAcompMetas(dNums, hoje)}
+  `
+}
+
+function renderAcompMetas(dNums, hoje) {
+  let html = ''
+  const mFilt = S.fObj ? S.metas.filter(m => m.obj_id === S.fObj) : S.metas
+  if (mFilt.length === 0) return '<div class="card" style="text-align:center;color:#64748b;padding:32px">Sem metas para este objetivo no período.</div>'
+
+  S.objs.forEach(o => {
+    const ms = mFilt.filter(m => m.obj_id === o.id)
+    if (ms.length === 0) return
+    const a = S.areas.find(x => x.id === o.area_id)
+
+    html += `<div style="margin-bottom:24px">
+      <div style="font-size:13px;font-weight:700;color:#64748b;margin-bottom:8px;text-transform:uppercase">${a?.icon||''} ${a?.nome||''} › ${o.nome}</div>`
+
+    ms.forEach(m => {
+      const mChks = S.chks.filter(c => c.meta_id === m.id)
+      const pct = calcPct(m, mChks, dNums.length)
+
+      html += `<div class="card" style="margin-bottom:12px;overflow-x:auto">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:8px">
+          <div>
+            <div style="font-weight:600;font-size:15px">${m.nome}</div>
+            <div style="font-size:12px;color:#64748b">${fmtTipoMeta(m)}</div>
+          </div>
+          <div style="text-align:right">
+            <span style="font-size:20px;font-weight:800;color:#a5b4fc">${pct}%</span>
+            <div class="pbar" style="width:80px"><div class="pfill" style="width:${pct}%"></div></div>
+          </div>
+        </div>
+        <div style="display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px">
+          ${dNums.map(d => {
+            const data = `${S.ano}-${String(S.mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+            const chk = mChks.find(c => c.data === data)
+            const isHoje = d === hoje && S.mes === new Date().getMonth()+1 && S.ano === new Date().getFullYear()
+            if (m.tipo === 'dias') {
+              const cls = chk ? (chk.status === 'ok' ? 'done' : 'fail') : ''
+              return `<div class="chk-cell ${cls}" title="Dia ${d}${isHoje?' (hoje)':''}" onclick="togChk('${m.id}','${data}','${chk?.id||''}','${chk?.status||''}')" style="${isHoje?'outline:2px solid #6366f1;':''}">
+                ${d}
+              </div>`
+            } else {
+              const val = chk?.qtd || 0
+              const lbl = m.tipo === 'moeda' && val > 0 ? fmtBRL(val, true) : (val > 0 ? val : d)
+              return `<div class="chk-cell ${val>0?'qty':''}" title="Dia ${d}: ${m.tipo==='moeda'?fmtBRL(val):val}" onclick="abrirQty('${m.id}','${data}','${chk?.id||''}',${val},'${m.tipo}')" style="${isHoje?'outline:2px solid #6366f1;':''}font-size:${m.tipo==='moeda'&&val>0?'9px':'12px'}">
+                ${lbl}
+              </div>`
+            }
+          }).join('')}
+        </div>
+      </div>`
+    })
+    html += '</div>'
+  })
+  return html
+}
+
+function calcPct(meta, chks, totalDias) {
+  if (meta.tipo === 'dias') {
+    return totalDias > 0 ? Math.min(100, Math.round(chks.filter(c => c.status === 'ok').length / totalDias * 100)) : 0
+  } else {
+    const qtdMeta = meta.qtd_meta || 1
+    const realizado = chks.reduce((s, c) => s + (c.qtd || 0), 0)
+    return Math.min(100, Math.round(realizado / qtdMeta * 100))
+  }
+}
+
+function fmtBRL(val, abrev = false) {
+  if (!val) return 'R$ 0'
+  if (abrev && val >= 1000) return 'R$' + (val/1000).toFixed(1).replace('.',',') + 'k'
+  return 'R$ ' + Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+function fmtTipoMeta(m) {
+  const recorr = m.recorrencia === 'unico' ? '🎯 Único' : m.recorrencia === 'anual' ? '📆 Anual' : '📅 Mensal'
+  if (m.tipo === 'dias') return `${recorr} · Dias (✓/✗)`
+  if (m.tipo === 'moeda') return `${recorr} · 💰 R$ · Meta: ${fmtBRL(m.qtd_meta)}`
+  return `${recorr} · 🔢 Quantidade · Meta: ${m.qtd_meta || 0}`
+}
+
+async function togChk(metaId, data, chkId, status) {
+  if (!licOk()) { toast('Período de teste encerrado. Faça o upgrade!', false); return }
+  let novoStatus = 'ok'
+  if (status === 'ok') novoStatus = 'fail'
+  else if (status === 'fail') novoStatus = ''  // remove
+
+  let err
+  if (novoStatus === '' && chkId) {
+    const r = await db.from('checkins').delete().eq('id', chkId)
+    err = r.error
+  } else if (chkId) {
+    const r = await db.from('checkins').update({ status: novoStatus }).eq('id', chkId)
+    err = r.error
+  } else {
+    // tenta upsert para evitar conflito de chave única
+    const r = await db.from('checkins').upsert(
+      { user_id: S.user.id, meta_id: metaId, data, status: novoStatus },
+      { onConflict: 'meta_id,data' }
+    )
+    err = r.error
+  }
+  if (err) { toast('Erro ao salvar: ' + (err.message || err.code), false); return }
+  await rcChk()
+  rdA()
+}
+
+function abrirQty(metaId, data, chkId, val, tipo) {
+  if (!licOk()) { toast('Período de teste encerrado. Faça o upgrade!', false); return }
+  S._mqMeta = metaId; S._mqDia = data; S._mqChk = chkId; S._mqTipo = tipo || 'quantidade'
+  const isMoeda = tipo === 'moeda'
+  document.getElementById('mq-title').textContent = `Dia ${data.slice(8)} — ${isMoeda ? 'Valor em R$' : 'Registrar quantidade'}`
+  const inp = document.getElementById('mq-val')
+  inp.value = val || ''
+  inp.step = isMoeda ? '0.01' : '1'
+  inp.placeholder = isMoeda ? 'Ex: 1500,00' : '0'
+  // prefixo R$
+  let pfx = document.getElementById('mq-prefix')
+  if (!pfx) {
+    pfx = document.createElement('div')
+    pfx.id = 'mq-prefix'
+    pfx.style.cssText = 'font-size:14px;color:#94a3b8;margin-bottom:4px'
+    inp.parentNode.insertBefore(pfx, inp)
+  }
+  pfx.textContent = isMoeda ? '💰 Valor realizado em R$:' : 'Quantidade realizada:'
+  openModal('modal-qty')
+}
+
+async function svChkQ() {
+  const val = +document.getElementById('mq-val').value
+  if (isNaN(val) || val < 0) { toast('Informe um valor válido', false); return }
+  const chkId = S._mqChk
+  const payload = { qtd: val, status: val > 0 ? 'ok' : 'fail' }
+  let err
+  if (chkId) {
+    const r = await db.from('checkins').update(payload).eq('id', chkId)
+    err = r.error
+  } else {
+    const r = await db.from('checkins').upsert(
+      { user_id: S.user.id, meta_id: S._mqMeta, data: S._mqDia, ...payload },
+      { onConflict: 'meta_id,data' }
+    )
+    err = r.error
+  }
+  if (err) { toast('Erro ao salvar: ' + (err.message || err.code), false); return }
+  closeModal('modal-qty')
+  await rcChk()
+  rdA()
+}
+
+// ============================================================
+// RENDER RELATÓRIOS
+// ============================================================
+function rdR() {
+  const el = document.getElementById('sub-rel')
+  const mNome = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][S.mes-1]
+
+  el.innerHTML = `
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+      <h2 style="font-size:20px;font-weight:800">📄 Relatórios</h2>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <select class="sel" style="width:auto" onchange="S.mes=+this.value;rcChk().then(()=>rdR())">
+          ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}" ${m===S.mes?'selected':''}>${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m-1]}</option>`).join('')}
+        </select>
+        <select class="sel" style="width:auto" onchange="S.ano=+this.value;rcChk().then(()=>rdR())">
+          ${[2024,2025,2026,2027].map(y=>`<option value="${y}" ${y===S.ano?'selected':''}>${y}</option>`).join('')}
+        </select>
+        <button class="btn btn-g" onclick="expPDF()">⬇️ PDF</button>
+        <button class="btn btn-y" onclick="expPNG()">🖼️ PNG</button>
+      </div>
+    </div>
+    <div id="rel-content">
+      ${rdRelContent()}
+    </div>
+  `
+  // Draw charts after render
+  setTimeout(() => {
+    drawRelCharts()
+  }, 100)
+}
+
+function rdRelContent() {
+  const dias = diasDoMes(S.ano, S.mes)
+  const mNome = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][S.mes-1]
+  let html = `<div id="rel-pdf-area">`
+  html += `<div class="card" style="margin-bottom:16px;text-align:center;background:linear-gradient(135deg,#312e81,#1e1b4b)">
+    <div style="font-size:28px">🎯</div>
+    <h2 style="font-size:22px;font-weight:800;margin-top:8px">Relatório de Conquistas</h2>
+    <p style="color:#94a3b8;margin-top:4px">${mNome} ${S.ano}</p>
+  </div>`
+
+  S.areas.forEach(a => {
+    const objs = S.objs.filter(o => o.area_id === a.id)
+    if (objs.length === 0) return
+    html += `<div class="card" style="margin-bottom:16px;border-left:4px solid ${a.cor||'#6366f1'}">
+      <h3 style="font-size:16px;font-weight:700;margin-bottom:12px">${a.icon||'📌'} ${a.nome}</h3>`
+
+    objs.forEach(o => {
+      const mts = S.metas.filter(m => m.obj_id === o.id)
+      if (mts.length === 0) return
+      html += `<div style="margin-bottom:12px">
+        <div style="font-weight:600;color:#a5b4fc;margin-bottom:8px">${o.nome}</div>`
+
+      mts.forEach(m => {
+        const mChks = S.chks.filter(c => c.meta_id === m.id)
+        const pct = calcPct(m, mChks, dias)
+        let detalhe = ''
+        if (m.tipo === 'dias') {
+          const ok = mChks.filter(c => c.status === 'ok').length
+          const fail = mChks.filter(c => c.status === 'fail').length
+          detalhe = `${ok} dias realizados · ${fail} não realizados · ${dias - ok - fail} sem registro`
+        } else {
+          const real = mChks.reduce((s,c) => s + (c.qtd||0), 0)
+          detalhe = `${real} / ${m.qtd_meta||0} (meta)`
+        }
+        html += `<div style="margin-bottom:8px;padding:10px;background:#0f172a;border-radius:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <span style="font-size:14px;font-weight:500">${m.nome}</span>
+            <span style="font-size:16px;font-weight:800;color:${pct>=80?'#22c55e':pct>=50?'#f59e0b':'#ef4444'}">${pct}%</span>
+          </div>
+          <div class="pbar"><div class="pfill" style="width:${pct}%;background:${pct>=80?'#22c55e':pct>=50?'#f59e0b':'#ef4444'}"></div></div>
+          <div style="font-size:12px;color:#64748b;margin-top:4px">${detalhe}</div>
+        </div>`
+      })
+      html += '</div>'
+    })
+    html += '</div>'
+  })
+
+  // Charts
+  html += `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:16px;margin-bottom:16px">
+    <div class="card"><h4 style="font-weight:700;margin-bottom:12px">Realização por Área</h4><canvas id="chart-rel-bar" height="120"></canvas></div>
+    <div class="card"><h4 style="font-weight:700;margin-bottom:12px">Distribuição de Metas</h4><canvas id="chart-rel-pie" height="120"></canvas></div>
+  </div>`
+
+  html += '</div>'
+  return html
+}
+
+function drawRelCharts() {
+  const dias = diasDoMes(S.ano, S.mes)
+  const areaStats = S.areas.map(a => {
+    const objs = S.objs.filter(o => o.area_id === a.id)
+    const metas = S.metas.filter(m => objs.some(o => o.id === m.obj_id))
+    let total = 0, feito = 0
+    metas.forEach(m => {
+      const chks = S.chks.filter(c => c.meta_id === m.id)
+      if (m.tipo === 'dias') { total += dias; feito += chks.filter(c => c.status === 'ok').length }
+      else { total += m.qtd_meta || 1; feito += chks.reduce((s,c) => s + (c.qtd||0), 0) }
+    })
+    return { ...a, pct: total > 0 ? Math.min(100, Math.round(feito/total*100)) : 0 }
+  })
+
+  const barCtx = document.getElementById('chart-rel-bar')
+  const pieCtx = document.getElementById('chart-rel-pie')
+
+  if (barCtx) {
+    if (S.chartRB) S.chartRB.destroy()
+    S.chartRB = new Chart(barCtx, {
+      type: 'bar',
+      data: {
+        labels: areaStats.map(a => a.nome),
+        datasets: [{ label: '%', data: areaStats.map(a => a.pct), backgroundColor: areaStats.map(a => (a.cor||'#6366f1')+'cc'), borderRadius: 4 }]
+      },
+      options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, max: 100, grid: { color: '#1e293b' }, ticks: { color: '#64748b' } }, x: { ticks: { color: '#94a3b8' } } } }
+    })
+  }
+
+  if (pieCtx) {
+    const metasPct = S.metas.map(m => {
+      const chks = S.chks.filter(c => c.meta_id === m.id)
+      return calcPct(m, chks, dias)
+    })
+    const above80 = metasPct.filter(p => p >= 80).length
+    const above50 = metasPct.filter(p => p >= 50 && p < 80).length
+    const below50 = metasPct.filter(p => p < 50).length
+    if (S.chartRP) S.chartRP.destroy()
+    S.chartRP = new Chart(pieCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['≥80% (ótimo)', '50–79% (médio)', '<50% (atenção)'],
+        datasets: [{ data: [above80, above50, below50], backgroundColor: ['#22c55e', '#f59e0b', '#ef4444'] }]
+      },
+      options: { responsive: true, plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8', font: { size: 11 } } } } }
+    })
+  }
+}
+
+async function expPDF() {
+  const el = document.getElementById('rel-pdf-area')
+  if (!el) return
+  toast('Gerando PDF...')
+  try {
+    const canvas = await html2canvas(el, { backgroundColor: '#1e293b', scale: 1.5 })
+    const { jsPDF } = window.jspdf
+    const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' })
+    const W = pdf.internal.pageSize.getWidth()
+    const H = pdf.internal.pageSize.getHeight()
+    const imgW = W
+    const imgH = canvas.height * imgW / canvas.width
+    let pos = 0
+    if (imgH <= H) {
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgW, imgH)
+    } else {
+      let pLeft = imgH
+      while (pLeft > 0) {
+        pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, -pos, imgW, imgH)
+        pLeft -= H; pos += H
+        if (pLeft > 0) pdf.addPage()
+      }
+    }
+    const mNome = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][S.mes-1]
+    pdf.save(`conquistas_${mNome}${S.ano}.pdf`)
+    toast('PDF gerado!')
+  } catch(e) { toast('Erro ao gerar PDF: ' + e.message, false) }
+}
+
+async function expPNG() {
+  const el = document.getElementById('rel-pdf-area')
+  if (!el) return
+  toast('Gerando imagem...')
+  try {
+    const canvas = await html2canvas(el, { backgroundColor: '#1e293b', scale: 2 })
+    const a = document.createElement('a')
+    const mNome = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][S.mes-1]
+    a.download = `conquistas_${mNome}${S.ano}.png`
+    a.href = canvas.toDataURL('image/png')
+    a.click()
+    toast('Imagem gerada!')
+  } catch(e) { toast('Erro ao gerar imagem: ' + e.message, false) }
+}
+
+// ============================================================
+// RENDER UPGRADE
+// ============================================================
+function rdUpgrade() {
+  const el = document.getElementById('sub-upgrade')
+  const dias = diasTrial()
+  el.innerHTML = `
+    <div style="max-width:600px;margin:0 auto">
+      <div style="text-align:center;margin-bottom:32px">
+        <div style="font-size:64px;margin-bottom:16px">⭐</div>
+        <h2 style="font-size:28px;font-weight:800;color:#e2e8f0">Plano Anual</h2>
+        <p style="color:#64748b;margin-top:8px">Acesso completo por 1 ano</p>
+      </div>
+      ${dias > 0 ? `<div style="background:#172554;border:1px solid #1e40af;border-radius:12px;padding:16px;text-align:center;margin-bottom:24px;color:#93c5fd">
+        ⏳ Você tem <strong>${dias} dia${dias!==1?'s':''}</strong> de teste gratuito restante${dias!==1?'s':''}
+      </div>` : `<div style="background:#450a0a;border:1px solid #991b1b;border-radius:12px;padding:16px;text-align:center;margin-bottom:24px;color:#fca5a5">
+        ⚠️ Seu período gratuito encerrou. Faça o upgrade para continuar.
+      </div>`}
+      <div class="card" style="border:2px solid #6366f1;margin-bottom:24px">
+        <div style="text-align:center;padding:8px;background:#1e1b4b;border-radius:8px;margin-bottom:16px">
+          <span style="font-size:13px;font-weight:700;color:#a5b4fc;text-transform:uppercase;letter-spacing:.1em">Oferta de Lançamento</span>
+        </div>
+        <div style="text-align:center;margin-bottom:16px">
+          <span style="font-size:48px;font-weight:900;color:#e2e8f0">R$ 97</span>
+          <span style="color:#64748b">/ano</span>
+          <div style="font-size:13px;color:#64748b;margin-top:4px">Menos de R$ 8,10/mês</div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px">
+          ${['✅ Acesso ilimitado a todas as funcionalidades','✅ Áreas, Objetivos e Metas ilimitados','✅ Check-ins diários sem limite','✅ Exportação PDF e PNG','✅ Gráficos e relatórios completos','✅ 1 ano de acesso garantido','✅ Suporte por e-mail'].map(f => `<div style="display:flex;align-items:center;gap:8px;font-size:14px;color:#cbd5e1">${f}</div>`).join('')}
+        </div>
+        <a href="https://buy.stripe.com/seu-link-aqui" target="_blank" class="btn btn-p" style="width:100%;padding:16px;font-size:16px;text-align:center;text-decoration:none;display:block" id="btn-upgrade">
+          🚀 Fazer Upgrade Agora — R$ 97/ano
+        </a>
+      </div>
+      <div class="card" style="background:#0f172a">
+        <h4 style="font-weight:700;margin-bottom:12px">Dúvidas Frequentes</h4>
+        <div style="display:flex;flex-direction:column;gap:12px;font-size:14px">
+          <div><strong style="color:#a5b4fc">Meus dados ficam salvos?</strong><p style="color:#94a3b8;margin-top:4px">Sim! Todos os seus dados ficam no Supabase, um banco de dados seguro na nuvem.</p></div>
+          <div><strong style="color:#a5b4fc">Posso cancelar?</strong><p style="color:#94a3b8;margin-top:4px">O plano é anual. Você pode não renovar ao final do período.</p></div>
+          <div><strong style="color:#a5b4fc">Funciona no celular?</strong><p style="color:#94a3b8;margin-top:4px">Sim! O app é responsivo e funciona em qualquer dispositivo.</p></div>
+        </div>
+      </div>
+    </div>
+  `
+}
+
+// ============================================================
+// CRUD — AREAS
+// ============================================================
+function selIcon(e) {
+  document.getElementById('ma-icon').value = e
+  document.getElementById('ma-icon-preview').textContent = e
+}
+
+function abrirArea(id) {
+  const a = id ? S.areas.find(x => x.id === id) : null
+  document.getElementById('ma-title').textContent = a ? 'Editar Área' : 'Nova Área'
+  document.getElementById('ma-id').value = a?.id || ''
+  document.getElementById('ma-nome').value = a?.nome || ''
+  document.getElementById('ma-icon').value = a?.icon || ''
+  document.getElementById('ma-icon-preview').textContent = a?.icon || '📌'
+  document.getElementById('ma-cor').value = a?.cor || '#6366f1'
+  document.getElementById('ma-del').style.display = a ? 'block' : 'none'
+  openModal('modal-area')
+}
+
+async function svA() {
+  const id = document.getElementById('ma-id').value
+  const nome = document.getElementById('ma-nome').value.trim()
+  const icon = document.getElementById('ma-icon').value.trim()
+  const cor = document.getElementById('ma-cor').value
+  if (!nome) { toast('Informe o nome da área', false); return }
+  if (id) {
+    await db.from('areas').update({ nome, icon, cor }).eq('id', id)
+  } else {
+    await db.from('areas').insert({ user_id: S.user.id, nome, icon, cor })
+  }
+  closeModal('modal-area')
+  await loadAll()
+  rdC()
+  toast(id ? 'Área atualizada!' : 'Área criada!')
+}
+
+async function dA() {
+  const id = document.getElementById('ma-id').value
+  if (!id) return
+  if (!confirm('Excluir esta área e todos seus objetivos/metas?')) return
+  const objIds = S.objs.filter(o => o.area_id === id).map(o => o.id)
+  const metaIds = S.metas.filter(m => objIds.includes(m.obj_id)).map(m => m.id)
+  if (metaIds.length) await db.from('checkins').delete().in('meta_id', metaIds)
+  if (metaIds.length) await db.from('metas').delete().in('id', metaIds)
+  if (objIds.length) await db.from('objetivos').delete().in('id', objIds)
+  await db.from('areas').delete().eq('id', id)
+  closeModal('modal-area')
+  await loadAll()
+  rdC()
+  toast('Área excluída!')
+}
+
+// ============================================================
+// CRUD — OBJETIVOS
+// ============================================================
+function abrirObj(id) {
+  const o = id ? S.objs.find(x => x.id === id) : null
+  const sel = document.getElementById('mo-area')
+  sel.innerHTML = S.areas.map(a => `<option value="${a.id}" ${o?.area_id===a.id?'selected':''}>${a.icon||''} ${a.nome}</option>`).join('')
+  document.getElementById('mo-title').textContent = o ? 'Editar Objetivo' : 'Novo Objetivo'
+  document.getElementById('mo-id').value = o?.id || ''
+  document.getElementById('mo-nome').value = o?.nome || ''
+  document.getElementById('mo-desc').value = o?.descricao || ''
+  document.getElementById('mo-tipo-obj').value = o?.tipo_obj || 'unico'
+  document.getElementById('mo-ini').value = o?.inicio || ''
+  document.getElementById('mo-fim').value = o?.fim || ''
+  document.getElementById('mo-prio').value = o?.prioridade || 'media'
+  document.getElementById('mo-del').style.display = o ? 'block' : 'none'
+  onTipoObjChg()
+  openModal('modal-obj')
+}
+
+async function svO() {
+  const id = document.getElementById('mo-id').value
+  const area_id = document.getElementById('mo-area').value
+  const nome = document.getElementById('mo-nome').value.trim()
+  const descricao = document.getElementById('mo-desc').value.trim()
+  const tipo_obj = document.getElementById('mo-tipo-obj').value
+  const inicio = document.getElementById('mo-ini').value
+  const prioridade = document.getElementById('mo-prio').value
+  if (!nome) { toast('Informe o nome do objetivo', false); return }
+  if (!area_id) { toast('Selecione uma área', false); return }
+  if (!inicio) { toast('Informe a data de início', false); return }
+  // Único: fim obrigatório; mensal/anual: fim = 31/12 do ano de início
+  let fim
+  if (tipo_obj === 'unico') {
+    fim = document.getElementById('mo-fim').value
+    if (!fim) { toast('Informe a data de término', false); return }
+  } else {
+    const ano = inicio.split('-')[0]
+    fim = `${ano}-12-31`
+  }
+  const payload = { area_id, nome, descricao, tipo_obj, inicio, fim, prioridade }
+  let err
+  if (id) {
+    const r = await db.from('objetivos').update(payload).eq('id', id)
+    err = r.error
+  } else {
+    const r = await db.from('objetivos').insert({ ...payload, user_id: S.user.id })
+    err = r.error
+  }
+  if (err) { toast('Erro ao salvar: ' + err.message, false); return }
+  closeModal('modal-obj')
+  await loadAll()
+  rdC()
+  toast(id ? 'Objetivo atualizado!' : 'Objetivo criado!')
+}
+
+async function dO() {
+  const id = document.getElementById('mo-id').value
+  if (!id || !confirm('Excluir este objetivo e todas suas metas?')) return
+  const metaIds = S.metas.filter(m => m.obj_id === id).map(m => m.id)
+  if (metaIds.length) await db.from('checkins').delete().in('meta_id', metaIds)
+  if (metaIds.length) await db.from('metas').delete().in('id', metaIds)
+  await db.from('objetivos').delete().eq('id', id)
+  closeModal('modal-obj')
+  await loadAll()
+  rdC()
+  toast('Objetivo excluído!')
+}
+
+// ============================================================
+// CRUD — METAS
+// ============================================================
+function onTipoObjChg() {
+  const tipo = document.getElementById('mo-tipo-obj').value
+  const desc = document.getElementById('mo-tipo-desc')
+  const fimWrap = document.getElementById('mo-fim-wrap')
+  const autoInfo = document.getElementById('mo-auto-fim-info')
+  const msgs = {
+    unico: '🎯 Objetivo com prazo definido — informe início e data de término',
+    mensal: '📅 Repete todo mês — informe o mês de início (término = 31/12 automático)',
+    anual: '📆 Meta do ano inteiro — informe o ano de início (término = 31/12 automático)'
+  }
+  desc.textContent = msgs[tipo] || ''
+  if (tipo === 'unico') {
+    // Mostra fim obrigatório
+    fimWrap.style.display = 'block'
+    document.getElementById('mo-fim-lbl').textContent = 'Término *'
+    autoInfo.style.display = 'none'
+  } else {
+    // Mensal ou anual: oculta fim, calcula automático
+    fimWrap.style.display = 'none'
+    document.getElementById('mo-fim').value = ''
+    autoInfo.style.display = 'block'
+  }
+}
+
+function onRecorrChg() {
+  const r = document.getElementById('mm-recorr').value
+  const lbl = document.getElementById('mm-qty-lbl')
+  const fimWrap = document.getElementById('mm-fim-wrap')
+  const autoInfo = document.getElementById('mm-auto-fim-info')
+  if (r === 'unico') {
+    // Meta única: mostra fim obrigatório
+    if (fimWrap) fimWrap.style.display = 'block'
+    if (autoInfo) autoInfo.style.display = 'none'
+    const fimLbl = document.getElementById('mm-fim-lbl')
+    if (fimLbl) fimLbl.textContent = 'Data de Conclusão *'
+    if (lbl) lbl.textContent = 'Meta de Quantidade'
+  } else {
+    // Mensal ou anual: oculta fim, calcula automático (31/12)
+    if (fimWrap) { fimWrap.style.display = 'none'; document.getElementById('mm-fim').value = '' }
+    if (autoInfo) autoInfo.style.display = 'block'
+    if (lbl) lbl.textContent = r === 'anual' ? 'Meta de Quantidade (por ano)' : 'Meta de Quantidade (por mês)'
+  }
+}
+
+function onTipoChg() {
+  const tipo = document.getElementById('mm-tipo').value
+  const qtyWrap = document.getElementById('mm-qty-wrap')
+  const lbl = document.getElementById('mm-qty-lbl')
+  const prefix = document.getElementById('mm-qty-prefix')
+  const inp = document.getElementById('mm-qty')
+  if (tipo === 'quantidade') {
+    qtyWrap.style.display = 'block'
+    lbl.textContent = 'Meta de Quantidade'
+    prefix.textContent = ''
+    inp.placeholder = 'Ex: 20'
+    inp.step = '1'
+  } else if (tipo === 'moeda') {
+    qtyWrap.style.display = 'block'
+    lbl.textContent = 'Meta em R$'
+    prefix.textContent = 'R$'
+    inp.placeholder = 'Ex: 50000'
+    inp.step = '0.01'
+  } else {
+    qtyWrap.style.display = 'none'
+    prefix.textContent = ''
+  }
+}
+
+function abrirMeta(id) {
+  const m = id ? S.metas.find(x => x.id === id) : null
+  const sel = document.getElementById('mm-obj')
+  sel.innerHTML = S.objs.map(o => `<option value="${o.id}" ${m?.obj_id===o.id?'selected':''}>${o.nome}</option>`).join('')
+  document.getElementById('mm-title').textContent = m ? 'Editar Meta' : 'Nova Meta'
+  document.getElementById('mm-id').value = m?.id || ''
+  document.getElementById('mm-nome').value = m?.nome || ''
+  document.getElementById('mm-recorr').value = m?.recorrencia || 'mensal'
+  document.getElementById('mm-tipo').value = m?.tipo || 'dias'
+  document.getElementById('mm-qty').value = m?.qtd_meta != null ? m.qtd_meta : ''
+  document.getElementById('mm-ini').value = m?.inicio || ''
+  document.getElementById('mm-fim').value = m?.fim || ''
+  document.getElementById('mm-del').style.display = m ? 'block' : 'none'
+  onTipoChg()
+  onRecorrChg()
+  openModal('modal-meta')
+}
+
+async function svM() {
+  const id = document.getElementById('mm-id').value
+  const obj_id = document.getElementById('mm-obj').value
+  const nome = document.getElementById('mm-nome').value.trim()
+  const recorrencia = document.getElementById('mm-recorr').value
+  const tipo = document.getElementById('mm-tipo').value
+  const qtd_meta = document.getElementById('mm-qty').value !== '' ? +document.getElementById('mm-qty').value : null
+  const inicio = document.getElementById('mm-ini').value
+  if (!nome) { toast('Informe o nome da meta', false); return }
+  if (!obj_id) { toast('Selecione um objetivo', false); return }
+  if (!inicio) { toast('Informe a data de início', false); return }
+  if ((tipo === 'quantidade' || tipo === 'moeda') && qtd_meta === null) {
+    toast('Informe o valor da meta', false); return
+  }
+  // Único: fim obrigatório; mensal/anual: fim = 31/12 do ano de início
+  let fim
+  if (recorrencia === 'unico') {
+    fim = document.getElementById('mm-fim').value
+    if (!fim) { toast('Informe a data de conclusão', false); return }
+  } else {
+    const ano = inicio.split('-')[0]
+    fim = `${ano}-12-31`
+  }
+  const payload = { obj_id, nome, recorrencia, tipo, qtd_meta, inicio, fim }
+  let err
+  if (id) {
+    const r = await db.from('metas').update(payload).eq('id', id)
+    err = r.error
+  } else {
+    const r = await db.from('metas').insert({ ...payload, user_id: S.user.id })
+    err = r.error
+  }
+  if (err) { toast('Erro ao salvar meta: ' + err.message, false); return }
+  closeModal('modal-meta')
+  await loadAll()
+  rdC()
+  toast(id ? 'Meta atualizada!' : 'Meta criada!')
+}
+
+async function dM() {
+  const id = document.getElementById('mm-id').value
+  if (!id || !confirm('Excluir esta meta e todos seus check-ins?')) return
+  await db.from('checkins').delete().eq('meta_id', id)
+  await db.from('metas').delete().eq('id', id)
+  closeModal('modal-meta')
+  await loadAll()
+  rdC()
+  toast('Meta excluída!')
+}
+
+// ============================================================
+// UTILS
+// ============================================================
+function diasDoMes(ano, mes) {
+  return new Date(ano, mes, 0).getDate()
+}
+
+// ============================================================
+// MOBILE
+// ============================================================
+function checkMobile() {
+  const isMob = window.innerWidth <= 768
+  document.getElementById('mob-header').style.display = isMob ? 'flex' : 'none'
+}
+window.addEventListener('resize', checkMobile)
+checkMobile()
+
+// ============================================================
+// AUTO LOGIN CHECK
+// ============================================================
+
+// Verifica se veio de link de recuperação de senha (hash contém type=recovery ou type=email_change)
+const _urlHash = window.location.hash || ''
+const _isRecovery = _urlHash.includes('type=recovery')
+
+;(async () => {
+  // Se veio de link de recuperação, NÃO faz auto-login
+  // O onAuthStateChange vai disparar PASSWORD_RECOVERY e cuidar do fluxo
+  if (_isRecovery) {
+    go('nova-senha') // Mostra tela enquanto aguarda o evento
+    return
+  }
+
+  const { data: { session } } = await db.auth.getSession()
+  if (session?.user) {
+    const remember = localStorage.getItem('pc_remember') === '1'
+    const hasSession = sessionStorage.getItem('pc_session') === '1'
+    const neverLogged = localStorage.getItem('pc_remember') === null
+    // Só exige re-login se o usuário explicitamente escolheu NÃO lembrar
+    // Se nunca fez login pelo form (neverLogged) ou marcou lembrar → entra direto
+    if (remember || hasSession || neverLogged) {
+      sessionStorage.setItem('pc_session', '1')
+      S.user = session.user
+      await afterLogin()
+    } else {
+      // Usuário escolheu "não lembrar" anteriormente → pede login novamente
+      await db.auth.signOut()
+      go('login')
+    }
+  }
+})()
+
+// Listen auth changes
+db.auth.onAuthStateChange(async (event, session) => {
+  if (event === 'PASSWORD_RECOVERY') {
+    // Usuário clicou no link de recuperação — mostra tela de nova senha
+    S.user = session.user
+    go('nova-senha')
+  } else if (event === 'SIGNED_IN' && session?.user && S.tela !== 'app' && S.tela !== 'nova-senha') {
+    S.user = session.user
+    sessionStorage.setItem('pc_session', '1')
+    await afterLogin()
+  } else if (event === 'SIGNED_OUT') {
+    sessionStorage.removeItem('pc_session')
+    go('login')
+  }
+})
+</script>
+</body>
+</html>
