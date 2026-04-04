@@ -215,6 +215,7 @@
       </div>
       <div style="flex:1;padding:8px 0">
         <div class="sitem active" id="nav-dash" onclick="navTo('dash')">📊 Dashboard</div>
+        <div class="sitem" id="nav-guia" onclick="navTo('guia')">📖 Guia CORE</div>
         <div style="font-size:10px;color:#334155;font-weight:700;letter-spacing:2px;padding:8px 16px 2px;text-transform:uppercase">Método CORE</div>
         <div class="sitem" id="nav-cons" onclick="navTo('cons')">🧠 C · Consciência</div>
         <div class="sitem" id="nav-cad" onclick="navTo('cad')">🎯 O · Objetivos</div>
@@ -238,6 +239,7 @@
 
       <!-- SUB-SCREENS -->
       <div id="sub-dash" style="padding:24px;display:block"></div>
+      <div id="sub-guia" style="padding:24px;display:none"></div>
       <div id="sub-cons" style="padding:24px;display:none"></div>
       <div id="sub-cad" style="padding:24px;display:none"></div>
       <div id="sub-acomp" style="padding:24px;display:none"></div>
@@ -413,8 +415,10 @@
       <button id="fmt-feed"    class="tab-btn active" onclick="setFmtPost('feed')"    style="flex:1">⬛ Feed 1080×1080</button>
       <button id="fmt-stories" class="tab-btn"        onclick="setFmtPost('stories')" style="flex:1">📱 Stories 1080×1920</button>
     </div>
-    <div style="display:flex;gap:6px;margin-bottom:14px;flex-wrap:wrap">
-      <button id="tema-trofeu"   class="tab-btn active" onclick="setTemaPost('trofeu')"   style="font-size:12px;padding:5px 10px">🏆 Conquista</button>
+    <div style="display:flex;gap:5px;margin-bottom:14px;flex-wrap:wrap">
+      <button id="tema-podio"    class="tab-btn active" onclick="setTemaPost('podio')"    style="font-size:12px;padding:5px 10px">🧍 Pódio</button>
+      <button id="tema-vitoria"  class="tab-btn"        onclick="setTemaPost('vitoria')"  style="font-size:12px;padding:5px 10px">🏆 Vitória</button>
+      <button id="tema-trofeu"   class="tab-btn"        onclick="setTemaPost('trofeu')"   style="font-size:12px;padding:5px 10px">✨ Conquista</button>
       <button id="tema-estrelas" class="tab-btn"        onclick="setTemaPost('estrelas')" style="font-size:12px;padding:5px 10px">🌟 Potencial</button>
       <button id="tema-montanha" class="tab-btn"        onclick="setTemaPost('montanha')" style="font-size:12px;padding:5px 10px">🏔️ Cume</button>
       <button id="tema-foguete"  class="tab-btn"        onclick="setTemaPost('foguete')"  style="font-size:12px;padding:5px 10px">🚀 Evolução</button>
@@ -748,10 +752,16 @@ function navTo(sub) {
   closeSide()
   if (sub === 'cons') { rdCons(); return }
   if (sub === 'dash') rdD()
+  else if (sub === 'guia') rdGuia()
   else if (sub === 'cad') rdC()
   else if (sub === 'acomp') rdA()
   else if (sub === 'rel') rdR()
   else if (sub === 'upgrade') rdUpgrade()
+}
+
+function rdGuia() {
+  const el = document.getElementById('sub-guia')
+  el.innerHTML = renderConsGuia()
 }
 
 function openSide() {
@@ -999,8 +1009,13 @@ async function loadAll() {
 
 async function rcChk() {
   const uid = S.user.id
-  const ym = `${S.ano}-${String(S.mes).padStart(2,'0')}`
-  const { data } = await db.from('checkins').select('*').eq('user_id', uid).like('data', ym + '%')
+  const pad2 = n => String(n).padStart(2,'0')
+  // Usa gte/lte (range de datas) em vez de LIKE — LIKE em coluna DATE causa 404 no PostgREST
+  const firstDay = `${S.ano}-${pad2(S.mes)}-01`
+  const lastDay  = `${S.ano}-${pad2(S.mes)}-${pad2(diasDoMes(S.ano, S.mes))}`
+  const { data, error } = await db.from('checkins').select('*')
+    .eq('user_id', uid).gte('data', firstDay).lte('data', lastDay)
+  if (error) { console.error('rcChk error:', error.message); S.chks = []; return }
   S.chks = data || []
 }
 
@@ -1332,9 +1347,36 @@ function renderConsDeclaracao() {
 // ============================================================
 // buildPostHTML: todos os valores em px nativos para 1080×1080
 function buildPostHTML(nome, data) {
+  // Silhueta de pessoa no pódio — lado direito, semi-transparente
+  const _fSVG = (()=>{
+    const fx=800, fy=590
+    const lines=Array.from({length:10},(_,i)=>{
+      const a=(i/10)*Math.PI*2, r1=290, r2=370
+      const x1=(fx+Math.cos(a)*r1).toFixed(1), y1=(fy+Math.sin(a)*r1).toFixed(1)
+      const x2=(fx+Math.cos(a)*r2).toFixed(1), y2=(fy+Math.sin(a)*r2).toFixed(1)
+      return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="white" stroke-width="2" opacity="0.4"/>`
+    }).join('')
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" style="position:absolute;top:0;left:0;pointer-events:none;opacity:.09">
+      <circle cx="${fx}" cy="${fy}" r="260" fill="rgba(255,255,255,0.03)"/>
+      <circle cx="${fx}" cy="${fy-185}" r="54" fill="white"/>
+      <rect x="${fx-23}" y="${fy-128}" width="46" height="145" rx="23" fill="white"/>
+      <line x1="${fx-15}" y1="${fy-100}" x2="${fx-115}" y2="${fy-200}" stroke="white" stroke-width="30" stroke-linecap="round"/>
+      <line x1="${fx+15}" y1="${fy-100}" x2="${fx+115}" y2="${fy-200}" stroke="white" stroke-width="30" stroke-linecap="round"/>
+      <line x1="${fx-14}" y1="${fy+17}" x2="${fx-52}" y2="${fy+160}" stroke="white" stroke-width="30" stroke-linecap="round"/>
+      <line x1="${fx+14}" y1="${fy+17}" x2="${fx+52}" y2="${fy+160}" stroke="white" stroke-width="30" stroke-linecap="round"/>
+      <rect x="${fx-100}" y="${fy+160}" width="200" height="165" rx="8" fill="white"/>
+      <rect x="${fx-248}" y="${fy+218}" width="152" height="107" rx="8" fill="white" opacity="0.7"/>
+      <rect x="${fx+96}" y="${fy+248}" width="152" height="77" rx="8" fill="white" opacity="0.5"/>
+      <circle cx="${fx-132}" cy="${fy-224}" r="16" fill="white"/>
+      <circle cx="${fx+132}" cy="${fy-224}" r="16" fill="white"/>
+      <circle cx="${fx}" cy="${fy-268}" r="13" fill="white" opacity="0.8"/>
+      ${lines}
+    </svg>`
+  })()
   return `
-    <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:.06;background:repeating-linear-gradient(45deg,#fff,#fff 1px,transparent 1px,transparent 40px)"></div>
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:.05;background:repeating-linear-gradient(45deg,#fff,#fff 1px,transparent 1px,transparent 40px)"></div>
     <div style="position:absolute;inset:24px;border:1px solid rgba(165,180,252,.3);border-radius:16px;pointer-events:none"></div>
+    ${_fSVG}
     <div style="position:absolute;top:62px;left:0;right:0;text-align:center">
       <span style="font-size:82px;font-weight:900;letter-spacing:14px;color:#f59e0b">CORE</span>
       <div style="font-size:28px;letter-spacing:7px;color:rgba(251,191,36,.8);margin-top:5px;font-weight:600">MÉTODO CORE</div>
@@ -1603,7 +1645,7 @@ function renderConsMapa() {
 // COMPARTILHAR PROGRESSO — Gerador de imagem do Dashboard
 // ============================================================
 let _fmtPost  = 'feed'
-let _temaPost = 'trofeu'
+let _temaPost = 'podio'
 
 function setFmtPost(fmt) {
   _fmtPost = fmt
@@ -1614,7 +1656,7 @@ function setFmtPost(fmt) {
 
 function setTemaPost(tema) {
   _temaPost = tema
-  ;['trofeu','estrelas','montanha','foguete'].forEach(t =>
+  ;['podio','vitoria','trofeu','estrelas','montanha','foguete'].forEach(t =>
     document.getElementById('tema-'+t).classList.toggle('active', t===tema))
   renderPreviewProgresso()
 }
@@ -1745,6 +1787,88 @@ function getBgSVG(w, h, tema) {
         <polygon points="${w*0.8},${h*0.2} ${w*0.78},${h*0.28} ${w*0.86},${h*0.24}" fill="white"/>
       </svg>`
   }
+    // 🧍 Pódio — silhueta de pessoa no 1º lugar
+    podio: (()=>{
+      const s = w/1080
+      const f = n => (n*s).toFixed(1)
+      // figura centralizada, levemente à direita
+      const fx = w*0.74, fy = h*0.54
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" style="position:absolute;top:0;left:0;opacity:0.10">
+        <!-- Halo glow -->
+        <circle cx="${fx}" cy="${fy}" r="${f(260)}" fill="rgba(255,255,255,0.03)"/>
+        <!-- Head -->
+        <circle cx="${fx}" cy="${fy-f(185)}" r="${f(54)}" fill="white"/>
+        <!-- Body -->
+        <rect x="${(fx-f(23))}" y="${fy-f(128)}" width="${f(46)}" height="${f(145)}" rx="${f(23)}" fill="white"/>
+        <!-- Left arm raised -->
+        <line x1="${fx-f(15)}" y1="${fy-f(100)}" x2="${fx-f(115)}" y2="${fy-f(200)}" stroke="white" stroke-width="${f(30)}" stroke-linecap="round"/>
+        <!-- Right arm raised -->
+        <line x1="${fx+f(15)}" y1="${fy-f(100)}" x2="${fx+f(115)}" y2="${fy-f(200)}" stroke="white" stroke-width="${f(30)}" stroke-linecap="round"/>
+        <!-- Left leg -->
+        <line x1="${fx-f(14)}" y1="${fy+f(17)}" x2="${fx-f(52)}" y2="${fy+f(160)}" stroke="white" stroke-width="${f(30)}" stroke-linecap="round"/>
+        <!-- Right leg -->
+        <line x1="${fx+f(14)}" y1="${fy+f(17)}" x2="${fx+f(52)}" y2="${fy+f(160)}" stroke="white" stroke-width="${f(30)}" stroke-linecap="round"/>
+        <!-- Podium 1st place -->
+        <rect x="${fx-f(100)}" y="${fy+f(160)}" width="${f(200)}" height="${f(165)}" rx="${f(8)}" fill="white"/>
+        <!-- Podium 2nd place (left) -->
+        <rect x="${fx-f(248)}" y="${fy+f(218)}" width="${f(152)}" height="${f(107)}" rx="${f(8)}" fill="white" opacity="0.75"/>
+        <!-- Podium 3rd place (right) -->
+        <rect x="${fx+f(96)}" y="${fy+f(248)}" width="${f(152)}" height="${f(77)}" rx="${f(8)}" fill="white" opacity="0.55"/>
+        <!-- Stars/sparkle around raised hands -->
+        <circle cx="${fx-f(132)}" cy="${fy-f(224)}" r="${f(16)}" fill="white"/>
+        <circle cx="${fx+f(132)}" cy="${fy-f(224)}" r="${f(16)}" fill="white"/>
+        <circle cx="${fx}" cy="${fy-f(268)}" r="${f(13)}" fill="white" opacity="0.8"/>
+        <!-- Radiating celebration lines -->
+        ${Array.from({length:10},(_,i)=>{
+          const a=(i/10)*Math.PI*2, r1=f(290), r2=f(370)
+          const x1=(fx+Math.cos(a)*parseFloat(r1)).toFixed(1), y1=(fy+Math.sin(a)*parseFloat(r1)).toFixed(1)
+          const x2=(fx+Math.cos(a)*parseFloat(r2)).toFixed(1), y2=(fy+Math.sin(a)*parseFloat(r2)).toFixed(1)
+          return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="white" stroke-width="2" opacity="0.4"/>`
+        }).join('')}
+      </svg>`
+    })(),
+
+    // 🏆 Vitória — pessoa segurando troféu acima da cabeça
+    vitoria: (()=>{
+      const s = w/1080
+      const f = n => (n*s).toFixed(1)
+      const fx = w*0.74, fy = h*0.52
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${w}" height="${h}" style="position:absolute;top:0;left:0;opacity:0.10">
+        <!-- Halo -->
+        <circle cx="${fx}" cy="${fy}" r="${f(280)}" fill="rgba(255,255,255,0.03)"/>
+        <!-- Troféu acima (corpo do copo) -->
+        <path d="M${fx-f(70)} ${fy-f(300)} Q${fx-f(70)} ${fy-f(360)} ${fx} ${fy-f(360)} Q${fx+f(70)} ${fy-f(360)} ${fx+f(70)} ${fy-f(300)} L${fx+f(70)} ${fy-f(220)} Q${fx+f(70)} ${fy-f(180)} ${fx} ${fy-f(170)} Q${fx-f(70)} ${fy-f(180)} ${fx-f(70)} ${fy-f(220)} Z" fill="white" opacity="0.9"/>
+        <!-- Troféu: alças -->
+        <path d="M${fx-f(70)} ${fy-f(290)} Q${fx-f(108)} ${fy-f(278)} ${fx-f(105)} ${fy-f(248)} Q${fx-f(102)} ${fy-f(220)} ${fx-f(70)} ${fy-f(230)}" stroke="white" stroke-width="${f(12)}" fill="none" stroke-linecap="round"/>
+        <path d="M${fx+f(70)} ${fy-f(290)} Q${fx+f(108)} ${fy-f(278)} ${fx+f(105)} ${fy-f(248)} Q${fx+f(102)} ${fy-f(220)} ${fx+f(70)} ${fy-f(230)}" stroke="white" stroke-width="${f(12)}" fill="none" stroke-linecap="round"/>
+        <!-- Troféu: haste e base -->
+        <rect x="${fx-f(12)}" y="${fy-f(170)}" width="${f(24)}" height="${f(42)}" fill="white"/>
+        <rect x="${fx-f(50)}" y="${fy-f(130)}" width="${f(100)}" height="${f(16)}" rx="${f(8)}" fill="white"/>
+        <!-- Braços levantando troféu -->
+        <line x1="${fx-f(20)}" y1="${fy-f(90)}" x2="${fx-f(62)}" y2="${fy-f(130)}" stroke="white" stroke-width="${f(30)}" stroke-linecap="round"/>
+        <line x1="${fx+f(20)}" y1="${fy-f(90)}" x2="${fx+f(62)}" y2="${fy-f(130)}" stroke="white" stroke-width="${f(30)}" stroke-linecap="round"/>
+        <!-- Head -->
+        <circle cx="${fx}" cy="${fy-f(40)}" r="${f(50)}" fill="white"/>
+        <!-- Body -->
+        <rect x="${fx-f(22)}" y="${fy+f(10)}" width="${f(44)}" height="${f(130)}" rx="${f(22)}" fill="white"/>
+        <!-- Legs -->
+        <line x1="${fx-f(13)}" y1="${fy+f(140)}" x2="${fx-f(48)}" y2="${fy+f(280)}" stroke="white" stroke-width="${f(28)}" stroke-linecap="round"/>
+        <line x1="${fx+f(13)}" y1="${fy+f(140)}" x2="${fx+f(48)}" y2="${fy+f(280)}" stroke="white" stroke-width="${f(28)}" stroke-linecap="round"/>
+        <!-- Stars -->
+        <circle cx="${fx-f(100)}" cy="${fy-f(340)}" r="${f(14)}" fill="white"/>
+        <circle cx="${fx+f(100)}" cy="${fy-f(340)}" r="${f(14)}" fill="white"/>
+        <circle cx="${fx}" cy="${fy-f(390)}" r="${f(11)}" fill="white" opacity="0.7"/>
+        <!-- Radiating lines -->
+        ${Array.from({length:10},(_,i)=>{
+          const a=(i/10)*Math.PI*2, r1=parseFloat(f(300)), r2=parseFloat(f(390))
+          const x1=(fx+Math.cos(a)*r1).toFixed(1), y1=(fy+Math.sin(a)*r1).toFixed(1)
+          const x2=(fx+Math.cos(a)*r2).toFixed(1), y2=(fy+Math.sin(a)*r2).toFixed(1)
+          return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="white" stroke-width="2" opacity="0.35"/>`
+        }).join('')}
+      </svg>`
+    })(),
+  }
+
   return temas[tema] || temas.trofeu
 }
 
@@ -1886,9 +2010,12 @@ function renderPreviewProgresso() {
 }
 
 function abrirCompartilharProgresso() {
-  _fmtPost = 'feed'
+  _fmtPost  = 'feed'
+  _temaPost = 'podio'
   document.getElementById('fmt-feed').classList.add('active')
   document.getElementById('fmt-stories').classList.remove('active')
+  ;['podio','vitoria','trofeu','estrelas','montanha','foguete'].forEach(t =>
+    document.getElementById('tema-'+t).classList.toggle('active', t==='podio'))
   renderPreviewProgresso()
   openModal('modal-progresso')
 }
