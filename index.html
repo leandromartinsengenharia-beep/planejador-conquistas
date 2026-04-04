@@ -403,6 +403,30 @@
   </div>
 </div>
 
+<!-- Modal Compartilhar Progresso -->
+<div id="modal-progresso" class="modal-bg">
+  <div class="modal" style="max-width:420px">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">📸 Compartilhar Progresso</h3>
+    <p style="font-size:12px;color:#64748b;margin-bottom:12px">Escolha o formato e baixe para postar!</p>
+    <div style="display:flex;gap:6px;margin-bottom:14px">
+      <button id="fmt-feed"    class="tab-btn active" onclick="setFmtPost('feed')"   style="flex:1">⬛ Feed (1:1)</button>
+      <button id="fmt-stories" class="tab-btn"        onclick="setFmtPost('stories')" style="flex:1">📱 Stories (9:16)</button>
+    </div>
+    <div style="border-radius:12px;overflow:hidden;margin-bottom:14px;border:1px solid #334155;background:#0f172a;display:flex;align-items:center;justify-content:center" id="prog-preview-wrap">
+      <div id="prog-preview" style="width:100%"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-p" onclick="baixarProgresso()" style="flex:1;padding:11px">⬇️ Baixar PNG</button>
+      <button class="btn btn-s" onclick="closeModal('modal-progresso')" style="flex:1;padding:11px">Fechar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Canvas oculto para render em alta res do progresso -->
+<div id="prog-render-wrap" style="position:fixed;left:-9999px;top:-9999px;overflow:hidden">
+  <div id="prog-render"></div>
+</div>
+
 <!-- Modal Novo Ano -->
 <div id="modal-novo-ano" class="modal-bg">
   <div class="modal" style="max-width:520px">
@@ -1417,6 +1441,175 @@ function renderConsMapa() {
 }
 
 // ============================================================
+// COMPARTILHAR PROGRESSO — Gerador de imagem do Dashboard
+// ============================================================
+let _fmtPost = 'feed'
+
+function setFmtPost(fmt) {
+  _fmtPost = fmt
+  document.getElementById('fmt-feed').classList.toggle('active', fmt === 'feed')
+  document.getElementById('fmt-stories').classList.toggle('active', fmt === 'stories')
+  renderPreviewProgresso()
+}
+
+function calcDashStats() {
+  const mNome = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'][S.mes-1]
+  const ativos = S.areas
+  const areaStats = ativos.map(a => {
+    const objs = S.objs.filter(o => o.area_id === a.id)
+    let total = 0, feito = 0
+    objs.forEach(o => {
+      S.metas.filter(m => m.obj_id === o.id).forEach(m => {
+        const dias = Array.from({length: new Date(S.ano, S.mes, 0).getDate()}, (_,i) => i+1)
+        dias.forEach(d => {
+          const dd = `${S.ano}-${String(S.mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`
+          const chk = S.chks.find(c => c.meta_id === m.id && c.data === dd)
+          if (chk) { total++; if (chk.status === 'ok' || chk.status === 'qty') feito++ }
+        })
+      })
+    })
+    const pct = total > 0 ? Math.min(100, Math.round(feito/total*100)) : 0
+    return { ...a, pct }
+  }).filter(a => a.pct > 0 || S.objs.some(o => o.area_id === a.id))
+  const overallPct = areaStats.length > 0 ? Math.round(areaStats.reduce((s,a)=>s+a.pct,0)/areaStats.length) : 0
+  return { mNome, areaStats, overallPct }
+}
+
+function buildProgressoHTML(w, h, stats) {
+  const { mNome, areaStats, overallPct } = stats
+  const nome   = S.perfil?.nome || 'Leandro Martins'
+  const nivel  = getNivel(S.perfil?.xp || 0)
+  const xp     = S.perfil?.xp || 0
+  const isStories = h > w
+  const s = w / 1080
+
+  const fs   = n => `${Math.round(n * s)}px`
+  const px   = n => Math.round(n * s)
+
+  // Cor do overall
+  const corGeral = overallPct >= 70 ? '#22c55e' : overallPct >= 40 ? '#eab308' : '#ef4444'
+
+  const topAreas = areaStats.slice(0, isStories ? 8 : 5)
+
+  return `
+    <div style="width:${w}px;height:${h}px;background:linear-gradient(160deg,#0f0c29 0%,#302b63 50%,#0f172a 100%);
+      font-family:'Segoe UI',sans-serif;position:relative;overflow:hidden;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:${fs(60)} ${fs(50)}">
+
+      <!-- Ornamento fundo -->
+      <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:.04;
+        background:repeating-linear-gradient(45deg,#fff,#fff 1px,transparent 1px,transparent ${fs(50)})"></div>
+      <div style="position:absolute;inset:${fs(18)};border:1px solid rgba(165,180,252,.2);border-radius:${fs(20)};pointer-events:none"></div>
+
+      <!-- Topo: Logo CORE -->
+      <div style="position:absolute;top:${fs(36)};left:0;right:0;text-align:center">
+        <span style="font-size:${fs(20)};font-weight:900;letter-spacing:${fs(5)}">
+          <span style="color:#818cf8">C</span><span style="color:#34d399">O</span><span style="color:#fbbf24">R</span><span style="color:#f87171">E</span>
+        </span>
+        <div style="font-size:${fs(8)};color:rgba(148,163,184,.7);letter-spacing:${fs(2)};margin-top:${fs(2)}">MÉTODO LEANDRO MARTINS</div>
+      </div>
+
+      <!-- Título -->
+      <div style="text-align:center;margin-bottom:${fs(24)}">
+        <div style="font-size:${fs(13)};color:#64748b;text-transform:uppercase;letter-spacing:${fs(3)};margin-bottom:${fs(6)}">Relatório de Progresso</div>
+        <div style="font-size:${fs(isStories?26:22)};font-weight:800;color:#e2e8f0">${nome}</div>
+        <div style="font-size:${fs(14)};color:#818cf8;margin-top:${fs(4)}">${mNome} ${S.ano} · ${nivel.emoji} ${nivel.nome} · ${xp} XP</div>
+      </div>
+
+      <!-- Overall grande -->
+      <div style="text-align:center;margin-bottom:${fs(28)}">
+        <div style="font-size:${fs(isStories?80:68)};font-weight:900;color:${corGeral};line-height:1">${overallPct}%</div>
+        <div style="font-size:${fs(14)};color:#64748b;margin-top:${fs(6)}">de realização geral no mês</div>
+        <div style="width:${fs(260)};height:${fs(8)};background:rgba(255,255,255,.08);border-radius:999px;margin:${fs(12)} auto 0;overflow:hidden">
+          <div style="width:${overallPct}%;height:100%;background:${corGeral};border-radius:999px;transition:width .4s"></div>
+        </div>
+      </div>
+
+      <!-- Áreas -->
+      ${topAreas.length ? `
+      <div style="width:100%;max-width:${fs(800)}">
+        ${topAreas.map(a => {
+          const cor = a.pct >= 70 ? '#22c55e' : a.pct >= 40 ? '#eab308' : '#ef4444'
+          return `<div style="display:flex;align-items:center;gap:${fs(10)};margin-bottom:${fs(12)}">
+            <span style="font-size:${fs(16)};width:${fs(24)};text-align:center;flex-shrink:0">${a.icon||'📌'}</span>
+            <span style="font-size:${fs(13)};color:#cbd5e1;min-width:${fs(140)};flex-shrink:0">${a.nome}</span>
+            <div style="flex:1;height:${fs(8)};background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden">
+              <div style="width:${a.pct}%;height:100%;background:${cor};border-radius:999px"></div>
+            </div>
+            <span style="font-size:${fs(13)};font-weight:700;color:${cor};min-width:${fs(36)};text-align:right">${a.pct}%</span>
+          </div>`
+        }).join('')}
+      </div>` : `<div style="font-size:${fs(14)};color:#64748b;text-align:center">Nenhuma área com progresso este mês</div>`}
+
+      <!-- Frase motivacional -->
+      <div style="margin-top:${fs(24)};text-align:center;max-width:${fs(700)}">
+        <div style="font-size:${fs(12)};color:rgba(148,163,184,.6);font-style:italic">"${getFraseHoje().f}"</div>
+        <div style="font-size:${fs(10)};color:rgba(100,116,139,.5);margin-top:${fs(4)}">— ${getFraseHoje().a}</div>
+      </div>
+
+      <!-- Rodapé -->
+      <div style="position:absolute;bottom:${fs(32)};left:0;right:0;text-align:center">
+        <div style="font-size:${fs(11)};color:rgba(148,163,184,.6)">📱 @coachleandromartins &nbsp;|&nbsp; 📺 @LEANDROMARTINSCOACH</div>
+        <div style="font-size:${fs(9)};color:rgba(100,116,139,.5);margin-top:${fs(3)}">App CORE — app.coachleandromartins.com.br</div>
+      </div>
+    </div>`
+}
+
+function renderPreviewProgresso() {
+  const stats  = calcDashStats()
+  const isSt   = _fmtPost === 'stories'
+  // Preview: largura fixa 340px, altura proporcional
+  const pw = 340
+  const ph = isSt ? Math.round(pw * 16/9) : pw
+  const wrap = document.getElementById('prog-preview-wrap')
+  wrap.style.maxHeight = isSt ? '520px' : '360px'
+  document.getElementById('prog-preview').style.width = pw + 'px'
+  document.getElementById('prog-preview').style.height = ph + 'px'
+  document.getElementById('prog-preview').innerHTML = buildProgressoHTML(pw, ph, stats)
+  // Render alta res
+  const rw = 1080, rh = isSt ? 1920 : 1080
+  const rWrap = document.getElementById('prog-render-wrap')
+  rWrap.style.width  = rw + 'px'
+  rWrap.style.height = rh + 'px'
+  const render = document.getElementById('prog-render')
+  render.style.width  = rw + 'px'
+  render.style.height = rh + 'px'
+  render.innerHTML = buildProgressoHTML(rw, rh, stats)
+}
+
+function abrirCompartilharProgresso() {
+  _fmtPost = 'feed'
+  document.getElementById('fmt-feed').classList.add('active')
+  document.getElementById('fmt-stories').classList.remove('active')
+  renderPreviewProgresso()
+  openModal('modal-progresso')
+}
+
+async function baixarProgresso() {
+  const btn = event.target
+  btn.textContent = '⏳ Gerando...'
+  btn.disabled = true
+  try {
+    const isSt = _fmtPost === 'stories'
+    const rw = 1080, rh = isSt ? 1920 : 1080
+    const el = document.getElementById('prog-render')
+    const canvas = await html2canvas(el, {
+      width:rw, height:rh, scale:1,
+      backgroundColor:'#0f0c29', useCORS:true, logging:false
+    })
+    const link = document.createElement('a')
+    const mes = ['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'][S.mes-1]
+    link.download = `progresso-core-${mes}-${S.ano}-${_fmtPost}.png`
+    link.href = canvas.toDataURL('image/png')
+    link.click()
+    toast('✅ Imagem baixada! Hora de postar e inspirar! 🚀')
+  } catch(e) {
+    toast('Erro ao gerar: ' + e.message, false)
+  }
+  btn.textContent = '⬇️ Baixar PNG'
+  btn.disabled = false
+}
+
+// ============================================================
 function rdD() {
   const el = document.getElementById('sub-dash')
   const totalObjs = S.objs.length
@@ -1464,6 +1657,7 @@ function rdD() {
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
       <h2 style="font-size:20px;font-weight:800">📊 Dashboard</h2>
       <div style="display:flex;align-items:center;gap:8px">
+        <button class="btn btn-p" onclick="abrirCompartilharProgresso()" style="padding:8px 14px;font-size:13px">📸 Compartilhar</button>
         <select class="sel" style="width:auto" onchange="S.mes=+this.value;rcChk().then(()=>{rdD()})">
           ${[1,2,3,4,5,6,7,8,9,10,11,12].map(m=>`<option value="${m}" ${m===S.mes?'selected':''}>${['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'][m-1]}</option>`).join('')}
         </select>
