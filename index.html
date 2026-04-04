@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
-<title>Planejador de Conquistas</title>
+<title>CORE — Consciência · Objetivos · Resultados · Evolução</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -70,6 +70,26 @@
   .chk-cell.qty{background:#6366f1;border-color:#6366f1;color:#fff}
   .trial-bar{background:#451a03;border-bottom:1px solid #92400e;padding:8px 16px;font-size:13px;color:#fcd34d;text-align:center}
   textarea.inp{resize:vertical;min-height:80px}
+  /* CORE Logo */
+  .core-logo{display:flex;align-items:center;justify-content:center;gap:2px;font-size:42px;font-weight:900;letter-spacing:4px;line-height:1}
+  .core-c{color:#818cf8}.core-o{color:#34d399}.core-r{color:#fbbf24}.core-e{color:#f87171}
+  .core-logo-sm{display:flex;align-items:center;gap:1px;font-size:20px;font-weight:900;letter-spacing:2px}
+  /* XP / Gamificação */
+  .xp-bar-wrap{background:#0f172a;border-radius:999px;height:6px;overflow:hidden;margin-top:4px}
+  .xp-bar-fill{height:100%;border-radius:999px;background:linear-gradient(90deg,#6366f1,#a855f7);transition:width .6s}
+  .level-badge{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:999px;font-size:12px;font-weight:700;background:#1e293b;border:1px solid #334155}
+  /* Fogos de Artifício */
+  #fireworks-canvas{position:fixed;inset:0;pointer-events:none;z-index:9999;display:none}
+  .celebration-msg{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10000;background:linear-gradient(135deg,#1e293b,#312e81);border:2px solid #6366f1;border-radius:20px;padding:32px 48px;text-align:center;display:none;animation:popIn .4s ease}
+  @keyframes popIn{from{transform:translate(-50%,-50%) scale(.5);opacity:0}to{transform:translate(-50%,-50%) scale(1);opacity:1}}
+  /* Frase do dia */
+  .quote-card{background:linear-gradient(135deg,#1e1b4b,#1e293b);border:1px solid #3730a3;border-radius:16px;padding:20px;margin-bottom:20px}
+  /* Versículo */
+  .verse-bar{background:#1e293b;border-top:1px solid #334155;padding:10px 20px;font-size:12px;color:#64748b;text-align:center;position:sticky;bottom:0}
+  /* Badge */
+  .badge-item{display:inline-flex;flex-direction:column;align-items:center;gap:4px;padding:8px 12px;background:#0f172a;border-radius:12px;border:1px solid #334155;font-size:11px;color:#64748b;min-width:64px}
+  .badge-item.earned{border-color:#6366f1;color:#a5b4fc}
+  .badge-item span:first-child{font-size:24px}
   @media(max-width:768px){
     .sidebar{position:fixed;left:-220px;top:0;z-index:50;transition:left .3s}
     .sidebar.open{left:0}
@@ -92,9 +112,9 @@
 <div id="tela-login" class="screen active items-center justify-center">
   <div style="width:100%;max-width:400px;padding:24px">
     <div class="text-center mb-8">
-      <div style="font-size:48px">🎯</div>
-      <h1 style="font-size:24px;font-weight:800;color:#e2e8f0;margin-top:8px">Planejador de Conquistas</h1>
-      <p style="color:#64748b;font-size:14px;margin-top:4px">Transforme objetivos em resultados</p>
+      <div class="core-logo"><span class="core-c">C</span><span class="core-o">O</span><span class="core-r">R</span><span class="core-e">E</span></div>
+      <p style="font-size:11px;letter-spacing:3px;color:#64748b;margin-top:6px;text-transform:uppercase">Consciência · Objetivos · Resultados · Evolução</p>
+      <p style="color:#94a3b8;font-size:13px;margin-top:12px;font-style:italic">por Leandro Martins</p>
     </div>
     <div class="card" style="display:flex;flex-direction:column;gap:16px">
       <div><label class="lbl">E-mail</label><input id="lg-email" class="inp" type="email" placeholder="seu@email.com"/></div>
@@ -182,8 +202,15 @@
     <!-- SIDEBAR -->
     <nav class="sidebar" id="sidebar">
       <div style="padding:16px 16px 8px">
-        <div style="font-size:18px;font-weight:800;color:#e2e8f0">🎯 Conquistas</div>
-        <div id="user-name" style="font-size:12px;color:#64748b;margin-top:2px"></div>
+        <div class="core-logo-sm"><span class="core-c">C</span><span class="core-o">O</span><span class="core-r">R</span><span class="core-e">E</span></div>
+        <div id="user-name" style="font-size:12px;color:#64748b;margin-top:4px"></div>
+        <div id="xp-sidebar" style="margin-top:8px;display:none">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span id="level-badge" class="level-badge">🌱 Semente</span>
+            <span id="xp-txt" style="font-size:11px;color:#64748b">0 XP</span>
+          </div>
+          <div class="xp-bar-wrap"><div class="xp-bar-fill" id="xp-fill" style="width:0%"></div></div>
+        </div>
       </div>
       <div style="flex:1;padding:8px 0">
         <div class="sitem active" id="nav-dash" onclick="navTo('dash')">📊 Dashboard</div>
@@ -203,7 +230,7 @@
       <!-- Mobile header -->
       <div style="display:none;padding:12px 16px;border-bottom:1px solid #1e293b;align-items:center;gap:12px" id="mob-header">
         <button class="btn btn-s" style="padding:6px 10px" onclick="openSide()">☰</button>
-        <span style="font-weight:700;color:#e2e8f0">🎯 Conquistas</span>
+        <span class="core-logo-sm"><span class="core-c">C</span><span class="core-o">O</span><span class="core-r">R</span><span class="core-e">E</span></span>
       </div>
 
       <!-- SUB-SCREENS -->
@@ -377,6 +404,17 @@
   </div>
 </div>
 
+<!-- Fogos de Artifício -->
+<canvas id="fireworks-canvas"></canvas>
+<!-- Celebração -->
+<div class="celebration-msg" id="celebration-msg">
+  <div style="font-size:48px" id="cel-emoji">🏆</div>
+  <div style="font-size:22px;font-weight:800;color:#e2e8f0;margin-top:12px" id="cel-titulo">Meta Concluída!</div>
+  <div style="font-size:14px;color:#a5b4fc;margin-top:8px" id="cel-frase"></div>
+  <div style="font-size:13px;color:#fbbf24;margin-top:12px" id="cel-xp">+50 XP</div>
+  <button class="btn btn-p" style="margin-top:20px;padding:10px 32px" onclick="fecharCelebracao()">🎯 Continuar!</button>
+</div>
+
 <script>
 // ============================================================
 // CONFIG — PREENCHA COM SEUS DADOS DO SUPABASE
@@ -389,6 +427,228 @@ const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsI
 // ============================================================
 const { createClient } = window.supabase
 const db = createClient(SUPA_URL, SUPA_KEY)
+
+// ============================================================
+// FRASES DO DIA — autores conhecidos (ciclam pelo dia do ano)
+// ============================================================
+const FRASES = [
+  {f:"Tudo que a mente pode conceber e acreditar, ela pode alcançar.",a:"Napoleon Hill"},
+  {f:"O sucesso é a soma de pequenos esforços repetidos dia após dia.",a:"Robert Collier"},
+  {f:"A jornada de mil milhas começa com um único passo.",a:"Lao Tsé"},
+  {f:"Você não precisa ser ótimo para começar, mas precisa começar para ser ótimo.",a:"Zig Ziglar"},
+  {f:"A disciplina é a ponte entre metas e conquistas.",a:"Jim Rohn"},
+  {f:"Acredite que você pode e você já está no meio do caminho.",a:"Theodore Roosevelt"},
+  {f:"O único lugar onde sucesso vem antes de trabalho é no dicionário.",a:"Vidal Sassoon"},
+  {f:"Não espere por condições perfeitas. Comece agora, comece onde você está.",a:"Arthur Ashe"},
+  {f:"Sua vida não melhora por acaso. Ela melhora com mudança.",a:"Jim Rohn"},
+  {f:"O segredo do avanço é começar.",a:"Mark Twain"},
+  {f:"Grandes coisas nunca vêm de zonas de conforto.",a:"Neil Strauss"},
+  {f:"Se você pode sonhar, você pode fazer.",a:"Walt Disney"},
+  {f:"A persistência é o caminho do êxito.",a:"Charles Chaplin"},
+  {f:"Não importa quão devagar você vá, desde que não pare.",a:"Confúcio"},
+  {f:"O modo de começar é parar de falar e começar a fazer.",a:"Walt Disney"},
+  {f:"Pense grande e não ouça quem diz que não dá.",a:"Donald Trump"},
+  {f:"Sucesso não é final, fracasso não é fatal: o que conta é a coragem de continuar.",a:"Winston Churchill"},
+  {f:"Você tem que esperar que as coisas dêm certo.",a:"Dale Carnegie"},
+  {f:"O talento vence jogos, mas só o trabalho em equipe ganha campeonatos.",a:"Michael Jordan"},
+  {f:"Cada dia é uma nova oportunidade de mudar sua vida.",a:"Jim Rohn"},
+  {f:"A maior glória não está em nunca cair, mas em levantar cada vez que caímos.",a:"Nelson Mandela"},
+  {f:"Seja a mudança que você quer ver no mundo.",a:"Mahatma Gandhi"},
+  {f:"Invista em seu autodesenvolvimento. É o melhor investimento que existe.",a:"Brian Tracy"},
+  {f:"Não espere o momento perfeito. Tome o momento e o torne perfeito.",a:"Zoey Sayward"},
+  {f:"O único fracasso real é não tentar.",a:"Elbert Hubbard"},
+  {f:"Quem tem um porquê suporta qualquer como.",a:"Friedrich Nietzsche"},
+  {f:"Trate cada dia como se fosse o primeiro dia do resto da sua vida.",a:"Ralph Waldo Emerson"},
+  {f:"Você é o resultado das suas escolhas.",a:"Jeff Bezos"},
+  {f:"Comece fazendo o necessário, depois o possível e de repente estará fazendo o impossível.",a:"São Francisco de Assis"},
+  {f:"A fé move montanhas. A ação transforma vidas.",a:"Leandro Martins"},
+]
+
+// ============================================================
+// VERSÍCULOS DO NOVO TESTAMENTO — graça de Deus
+// ============================================================
+const VERSICULOS = [
+  {v:"Porque pela graça sois salvos, por meio da fé.",r:"Efésios 2:8"},
+  {v:"Tudo posso naquele que me fortalece.",r:"Filipenses 4:13"},
+  {v:"O Senhor é meu pastor e nada me faltará.",r:"Salmos 23:1"},
+  {v:"Pedi e dar-se-vos-á; buscai e achareis.",r:"Mateus 7:7"},
+  {v:"Não vos conformeis com este século, mas transformai-vos pela renovação do vosso entendimento.",r:"Romanos 12:2"},
+  {v:"A graça do Senhor Jesus seja com o vosso espírito.",r:"Filemom 1:25"},
+  {v:"Porque Deus não nos deu espírito de covardia, mas de poder, de amor e de moderação.",r:"2 Timóteo 1:7"},
+  {v:"Sede fortes e corajosos. Não temais.",r:"Josué 1:9"},
+  {v:"O Senhor te abençoe e te guarde.",r:"Números 6:24"},
+  {v:"Confie no Senhor de todo o seu coração.",r:"Provérbios 3:5"},
+  {v:"Tudo coopera para o bem daqueles que amam a Deus.",r:"Romanos 8:28"},
+  {v:"A graça e a paz de Deus sejam convosco.",r:"Colossenses 1:2"},
+  {v:"Eu vim para que todos tenham vida, e vida em abundância.",r:"João 10:10"},
+  {v:"A fé é a certeza das coisas que se esperam.",r:"Hebreus 11:1"},
+  {v:"Não andem ansiosos por coisa alguma. Em tudo por meio de oração apresentai os vossos pedidos a Deus.",r:"Filipenses 4:6"},
+  {v:"O fruto do Espírito é amor, alegria, paz, paciência, amabilidade.",r:"Gálatas 5:22"},
+  {v:"Deus resiste aos soberbos, mas dá graça aos humildes.",r:"Tiago 4:6"},
+  {v:"Tudo quanto é verdadeiro, tudo quanto é honesto, nisso pensai.",r:"Filipenses 4:8"},
+  {v:"Sede, pois, perfeitos como é perfeito o vosso Pai que está nos céus.",r:"Mateus 5:48"},
+  {v:"Buscai primeiro o Reino de Deus e a sua justiça, e as demais coisas serão acrescentadas.",r:"Mateus 6:33"},
+  {v:"Porque somos feitura de Deus, criados em Cristo Jesus para as boas obras.",r:"Efésios 2:10"},
+  {v:"A graça de nosso Senhor Jesus Cristo seja com todos vós.",r:"Apocalipse 22:21"},
+  {v:"Ele que começou em vós a boa obra há de completá-la.",r:"Filipenses 1:6"},
+  {v:"Mais do que tudo o que se guarda, guarda o teu coração, porque dele procedem as saídas da vida.",r:"Provérbios 4:23"},
+  {v:"Com Deus faremos proezas.",r:"Salmos 108:13"},
+  {v:"O Senhor é a minha força e o meu escudo.",r:"Salmos 28:7"},
+  {v:"Sede alegres na esperança, pacientes na tribulação, perseverantes na oração.",r:"Romanos 12:12"},
+  {v:"A graça de Deus, que traz salvação, manifestou-se a todos.",r:"Tito 2:11"},
+  {v:"Nenhuma arma forjada contra ti prosperará.",r:"Isaías 54:17"},
+  {v:"Aquele que habita no esconderijo do Altíssimo, à sombra do Onipotente descansará.",r:"Salmos 91:1"},
+]
+
+function getDiaDoAno() {
+  const agora = new Date()
+  const ini = new Date(agora.getFullYear(), 0, 0)
+  return Math.floor((agora - ini) / 86400000)
+}
+function getFraseHoje() { return FRASES[getDiaDoAno() % FRASES.length] }
+function getVersiculoHoje() { return VERSICULOS[getDiaDoAno() % VERSICULOS.length] }
+
+function getSaudacao() {
+  const h = new Date().getHours()
+  if (h < 12) return 'Bom dia'
+  if (h < 18) return 'Boa tarde'
+  return 'Boa noite'
+}
+
+// ============================================================
+// GAMIFICAÇÃO — XP, Níveis, Badges
+// ============================================================
+const NIVEIS = [
+  {min:0,    max:200,  nome:'Semente',    emoji:'🌱'},
+  {min:201,  max:500,  nome:'Brotando',   emoji:'🌿'},
+  {min:501,  max:1000, nome:'Crescendo',  emoji:'🌳'},
+  {min:1001, max:2500, nome:'Conquistador',emoji:'⭐'},
+  {min:2501, max:5000, nome:'Campeão',    emoji:'🏆'},
+  {min:5001, max:Infinity, nome:'Lendário',emoji:'👑'},
+]
+const BADGES_DEF = [
+  {id:'primeira_meta', emoji:'🎯', nome:'Primeira Meta',   desc:'Completou a 1ª meta'},
+  {id:'sete_dias',     emoji:'🔥', nome:'Chama Viva',      desc:'7 dias consecutivos'},
+  {id:'trinta_dias',   emoji:'💎', nome:'Diamante',        desc:'30 dias consecutivos'},
+  {id:'declarado',     emoji:'✍️', nome:'Declarado',       desc:'Assinou a Declaração'},
+  {id:'mapeado',       emoji:'🧭', nome:'Mapeado',         desc:'Completou o MASD'},
+  {id:'evoluido',      emoji:'🚀', nome:'Evoluído',        desc:'Subiu de nível'},
+]
+const XP_ACAO = { checkin:10, meta_mes:50, objetivo:100, streak7:75, streak30:300, masd:25, declaracao:30 }
+
+function getNivel(xp) { return NIVEIS.find(n => xp >= n.min && xp <= n.max) || NIVEIS[0] }
+function getXpProxNivel(xp) {
+  const n = getNivel(xp)
+  return n.max === Infinity ? null : { atual: xp - n.min, total: n.max - n.min + 1, prox: n.max + 1 }
+}
+
+async function addXP(qtd, motivo='') {
+  if (!S.user) return
+  const perfil = S.perfil || {}
+  const xpAtual = perfil.xp || 0
+  const nivelAntes = getNivel(xpAtual)
+  const novoXp = xpAtual + qtd
+  const nivelDepois = getNivel(novoXp)
+  await db.from('usuarios').update({ xp: novoXp }).eq('id', S.user.id)
+  S.perfil = { ...perfil, xp: novoXp }
+  atualizarXPSidebar()
+  if (nivelAntes.nome !== nivelDepois.nome) {
+    await ganharBadge('evoluido')
+    toast(`${nivelDepois.emoji} Parabéns! Você é agora ${nivelDepois.nome}!`)
+  }
+}
+
+async function ganharBadge(id) {
+  if (!S.user || !S.perfil) return
+  const badges = S.perfil.badges || []
+  if (badges.includes(id)) return
+  const novos = [...badges, id]
+  await db.from('usuarios').update({ badges: novos }).eq('id', S.user.id)
+  S.perfil = { ...S.perfil, badges: novos }
+  const def = BADGES_DEF.find(b => b.id === id)
+  if (def) toast(`${def.emoji} Conquista desbloqueada: ${def.nome}!`)
+}
+
+function atualizarXPSidebar() {
+  const xp = S.perfil?.xp || 0
+  const nivel = getNivel(xp)
+  const prog = getXpProxNivel(xp)
+  document.getElementById('xp-sidebar').style.display = 'block'
+  document.getElementById('level-badge').textContent = `${nivel.emoji} ${nivel.nome}`
+  document.getElementById('xp-txt').textContent = `${xp} XP`
+  document.getElementById('xp-fill').style.width = prog ? `${Math.round(prog.atual/prog.total*100)}%` : '100%'
+}
+
+// ============================================================
+// FOGOS DE ARTIFÍCIO + CELEBRAÇÃO
+// ============================================================
+const FRASES_PARABENS = [
+  "Incrível! Você provou que é capaz! 🔥",
+  "Meta conquistada! Esse é o CORE em ação! ⭐",
+  "Extraordinário! Cada conquista é um passo para sua melhor versão! 🚀",
+  "Você não desistiu e chegou lá! Isso é disciplina! 💪",
+  "Meta cumprida! Deus honra quem persiste! 🙏",
+  "Fantástico! Continue assim — o sucesso é consequência! 🏆",
+  "Mais uma vitória! Sua consciência criou esse resultado! ✨",
+]
+
+let _fwAnim = null
+function dispararFogos(duracao=3500) {
+  const canvas = document.getElementById('fireworks-canvas')
+  canvas.style.display = 'block'
+  canvas.width = window.innerWidth
+  canvas.height = window.innerHeight
+  const ctx = canvas.getContext('2d')
+  const particles = []
+  const cores = ['#818cf8','#34d399','#fbbf24','#f87171','#a78bfa','#38bdf8','#fb7185']
+  function criarExplosao(x, y) {
+    for (let i = 0; i < 80; i++) {
+      const ang = Math.random() * Math.PI * 2
+      const vel = Math.random() * 6 + 2
+      particles.push({ x, y, vx: Math.cos(ang)*vel, vy: Math.sin(ang)*vel - 3,
+        cor: cores[Math.floor(Math.random()*cores.length)], alpha:1, r: Math.random()*3+1 })
+    }
+  }
+  let t = 0
+  function frame() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+    if (t % 40 === 0) criarExplosao(Math.random()*canvas.width, Math.random()*canvas.height*0.7)
+    particles.forEach((p,i) => {
+      p.x += p.vx; p.y += p.vy; p.vy += 0.15; p.alpha -= 0.018
+      ctx.globalAlpha = Math.max(0, p.alpha)
+      ctx.fillStyle = p.cor
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fill()
+    })
+    for (let i = particles.length-1; i >= 0; i--) { if (particles[i].alpha <= 0) particles.splice(i,1) }
+    ctx.globalAlpha = 1
+    t++
+    _fwAnim = requestAnimationFrame(frame)
+  }
+  frame()
+  setTimeout(() => {
+    cancelAnimationFrame(_fwAnim)
+    canvas.style.display = 'none'
+    ctx.clearRect(0, 0, canvas.width, canvas.height)
+  }, duracao)
+}
+
+function celebrarMeta(nomeMeta='', xpGanho=50) {
+  const frase = FRASES_PARABENS[Math.floor(Math.random()*FRASES_PARABENS.length)]
+  const msg = document.getElementById('celebration-msg')
+  document.getElementById('cel-titulo').textContent = `🏆 Meta Concluída!`
+  document.getElementById('cel-frase').textContent = frase
+  document.getElementById('cel-xp').textContent = `+${xpGanho} XP`
+  msg.style.display = 'block'
+  dispararFogos(5000)
+  addXP(xpGanho, 'meta_mes')
+}
+
+function fecharCelebracao() {
+  document.getElementById('celebration-msg').style.display = 'none'
+  cancelAnimationFrame(_fwAnim)
+  const canvas = document.getElementById('fireworks-canvas')
+  canvas.style.display = 'none'
+}
 
 // ============================================================
 // STATE
@@ -623,6 +883,17 @@ async function afterLogin() {
   S.perfil = data
   const nome = S.perfil?.nome || S.user.email
   document.getElementById('user-name').textContent = nome
+  atualizarXPSidebar()
+  // Versículo no rodapé
+  const v = getVersiculoHoje()
+  let vBar = document.getElementById('verse-footer')
+  if (!vBar) {
+    vBar = document.createElement('div')
+    vBar.id = 'verse-footer'
+    vBar.className = 'verse-bar'
+    document.querySelector('#tela-app main').appendChild(vBar)
+  }
+  vBar.innerHTML = `📖 <em>"${v.v}"</em> — <strong>${v.r}</strong>`
   // show trial bar
   const dias = diasTrial()
   const tb = document.getElementById('trial-bar')
@@ -706,7 +977,20 @@ function rdD() {
   // overall pct
   const overallPct = areaStats.length > 0 ? Math.round(areaStats.reduce((s,a) => s + a.pct, 0) / areaStats.length) : 0
 
+  const frase = getFraseHoje()
+  const versiculo = getVersiculoHoje()
+  const saudacao = getSaudacao()
+  const nomeUser = S.perfil?.nome || S.user?.email?.split('@')[0] || 'Campeão'
+  const xp = S.perfil?.xp || 0
+  const nivel = getNivel(xp)
+
   el.innerHTML = `
+    <!-- Saudação + Frase do dia -->
+    <div class="quote-card">
+      <div style="font-size:13px;color:#818cf8;font-weight:600;margin-bottom:4px">${getSaudacao()}, ${nomeUser}! ${nivel.emoji}</div>
+      <div style="font-size:16px;color:#e2e8f0;font-style:italic;line-height:1.5;margin-bottom:8px">"${frase.f}"</div>
+      <div style="font-size:12px;color:#64748b;text-align:right">— ${frase.a}</div>
+    </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
       <h2 style="font-size:20px;font-weight:800">📊 Dashboard</h2>
       <div style="display:flex;align-items:center;gap:8px">
