@@ -97,6 +97,19 @@
     #mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     #mob-overlay.show{display:block}
   }
+  @media print{
+    .sidebar,.trial-bar,.toast,.modal-bg,#fireworks-canvas,.celebration-msg,.verse-bar,
+    button:not(.no-print),[onclick]{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    .sidebar{display:none!important}
+    #mob-overlay{display:none!important}
+    .screen.active{display:block!important}
+    #sub-rel{display:block!important}
+    body{background:#fff!important;color:#000!important}
+    .card{background:#f8f8f8!important;border:1px solid #ccc!important;break-inside:avoid}
+    .btn,.modal-bg,.toast{display:none!important}
+    #rel-pdf-area{display:block!important}
+    .pfill{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  }
 </style>
 </head>
 <body>
@@ -385,24 +398,26 @@
 
 <!-- Modal Preview Imagem Instagram -->
 <div id="modal-img-post" class="modal-bg">
-  <div class="modal" style="max-width:520px">
-    <h3 style="font-size:16px;font-weight:700;margin-bottom:4px">📸 Imagem para Instagram</h3>
-    <p style="font-size:12px;color:#64748b;margin-bottom:12px">Clique em "Baixar" e poste nos stories ou feed!</p>
-    <!-- Preview: container 432×432, inner 1080×1080 scaled 0.4 via CSS transform -->
-    <div style="border-radius:12px;overflow:hidden;margin:0 auto 14px;border:1px solid #334155;width:432px;height:432px;position:relative;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)">
-      <div id="post-preview" style="width:1080px;height:1080px;transform:scale(0.4);transform-origin:top left;position:absolute;top:0;left:0;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px;font-family:'Segoe UI',sans-serif;position:relative">
+  <div class="modal" style="max-width:540px">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:8px">📸 Imagem para Instagram</h3>
+    <div style="display:flex;gap:4px;margin-bottom:12px;background:#0f172a;padding:4px;border-radius:8px;width:fit-content">
+      <button id="fmt-feed" class="tab-btn active" onclick="setPostFormato('feed')">◻️ Feed 1:1</button>
+      <button id="fmt-stories" class="tab-btn" onclick="setPostFormato('stories')">📱 Stories 9:16</button>
+    </div>
+    <div id="post-preview-wrap" style="border-radius:12px;overflow:hidden;margin:0 auto 14px;border:1px solid #334155;width:432px;height:432px;position:relative;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e)">
+      <div id="post-preview" style="width:1080px;height:1080px;transform:scale(0.4);transform-origin:top left;position:absolute;top:0;left:0;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);font-family:'Segoe UI',sans-serif;position:relative">
       </div>
     </div>
     <div style="display:flex;gap:8px">
-      <button class="btn btn-p" onclick="baixarImagemPost()" style="flex:1;padding:12px">⬇️ Baixar PNG 1080×1080</button>
+      <button id="btn-baixar-post" class="btn btn-p" onclick="baixarImagemPost()" style="flex:1;padding:12px">⬇️ Baixar PNG 1080×1080</button>
       <button class="btn btn-s" onclick="closeModal('modal-img-post')" style="flex:1;padding:12px">Fechar</button>
     </div>
   </div>
 </div>
 
-<!-- Canvas oculto para geração da imagem 1080x1080 -->
+<!-- Canvas oculto para geração da imagem (feed 1080x1080 / stories 1080x1920) -->
 <div id="post-render-wrap" style="position:fixed;left:-9999px;top:-9999px;width:1080px;height:1080px;overflow:hidden">
-  <div id="post-render" style="width:1080px;height:1080px;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:80px;font-family:'Segoe UI',sans-serif;position:relative">
+  <div id="post-render" style="width:1080px;height:1080px;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);font-family:'Segoe UI',sans-serif;position:relative">
   </div>
 </div>
 
@@ -454,13 +469,16 @@
 
 <!-- Modal Check-in Quantidade -->
 <div id="modal-qty" class="modal-bg">
-  <div class="modal" style="max-width:320px">
+  <div class="modal" style="max-width:480px;width:90vw">
     <h3 style="font-size:16px;font-weight:700;margin-bottom:12px" id="mq-title">Registrar Quantidade</h3>
     <div style="display:flex;flex-direction:column;gap:12px">
-      <div><label class="lbl">Valor realizado</label><input id="mq-val" class="inp" type="number" min="0" placeholder="0"/></div>
+      <div>
+        <label class="lbl">Valor realizado</label>
+        <input id="mq-val" class="inp" type="text" inputmode="decimal" placeholder="0" oninput="onMqInput(this)" style="font-size:18px;padding:14px"/>
+      </div>
       <div style="display:flex;gap:8px">
-        <button class="btn btn-p" onclick="svChkQ()" style="flex:1">Salvar</button>
-        <button class="btn btn-s" onclick="closeModal('modal-qty')" style="flex:1">Cancelar</button>
+        <button class="btn btn-p" onclick="svChkQ()" style="flex:1;padding:12px">Salvar</button>
+        <button class="btn btn-s" onclick="closeModal('modal-qty')" style="flex:1;padding:12px">Cancelar</button>
       </div>
     </div>
   </div>
@@ -1072,7 +1090,7 @@ async function rdCons() {
 }
 
 function renderCons(el) {
-  const abas = [{id:'perfil',l:'👤 Perfil'},{id:'guia',l:'📖 Guia CORE'},{id:'declaracao',l:'✍️ Declaração'},{id:'maas',l:'📊 MAAS'},{id:'masd',l:'🔍 MASD'},{id:'mapa',l:'🗺️ MAPA'}]
+  const abas = [{id:'perfil',l:'👤 Perfil'},{id:'declaracao',l:'✍️ Declaração'},{id:'maas',l:'📊 MAAS'},{id:'masd',l:'🔍 MASD'},{id:'mapa',l:'🗺️ MAPA'}]
   el.innerHTML = `
     <div style="margin-bottom:20px">
       <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px">
@@ -1092,7 +1110,6 @@ function renderCons(el) {
 
 function renderConsAba() {
   if (_consAba === 'perfil')      return renderConsPerfil()
-  if (_consAba === 'guia')        return renderConsGuia()
   if (_consAba === 'declaracao')  return renderConsDeclaracao()
   if (_consAba === 'maas')        return renderConsMaas()
   if (_consAba === 'masd')        return renderConsMasd()
@@ -1345,6 +1362,28 @@ function renderConsDeclaracao() {
 // ============================================================
 // GERADOR DE IMAGEM — DECLARAÇÃO PARA INSTAGRAM
 // ============================================================
+let _postFormato = 'feed' // 'feed' ou 'stories'
+
+function setPostFormato(f) {
+  _postFormato = f
+  document.querySelectorAll('#fmt-feed,#fmt-stories').forEach(b => b.classList.remove('active'))
+  document.getElementById('fmt-' + f).classList.add('active')
+  const wrap = document.getElementById('post-preview-wrap')
+  const prev = document.getElementById('post-preview')
+  if (f === 'stories') {
+    wrap.style.width = '243px'; wrap.style.height = '432px'
+    prev.style.width = '1080px'; prev.style.height = '1920px'
+    prev.style.transform = 'scale(0.225)'
+    document.getElementById('btn-baixar-post').textContent = '⬇️ Baixar PNG 1080×1920'
+  } else {
+    wrap.style.width = '432px'; wrap.style.height = '432px'
+    prev.style.width = '1080px'; prev.style.height = '1080px'
+    prev.style.transform = 'scale(0.4)'
+    document.getElementById('btn-baixar-post').textContent = '⬇️ Baixar PNG 1080×1080'
+  }
+  gerarImagemDeclaracao(false) // re-render without reopening modal
+}
+
 // buildPostHTML: todos os valores em px nativos para 1080×1080
 function buildPostHTML(nome, data) {
   // Silhueta de pessoa no pódio — lado direito, semi-transparente
@@ -1405,37 +1444,115 @@ function buildPostHTML(nome, data) {
     </div>`
 }
 
-function gerarImagemDeclaracao() {
+// buildPostHTMLStories: versão 1080×1920 para Stories do Instagram
+function buildPostHTMLStories(nome, data) {
+  const fx=810, fy=1150
+  const lines=Array.from({length:12},(_,i)=>{
+    const a=(i/12)*Math.PI*2, r1=320, r2=420
+    const x1=(fx+Math.cos(a)*r1).toFixed(1), y1=(fy+Math.sin(a)*r1).toFixed(1)
+    const x2=(fx+Math.cos(a)*r2).toFixed(1), y2=(fy+Math.sin(a)*r2).toFixed(1)
+    return `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="white" stroke-width="2" opacity="0.4"/>`
+  }).join('')
+  const _fSVG = `<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1920" style="position:absolute;top:0;left:0;pointer-events:none;opacity:.09">
+    <circle cx="${fx}" cy="${fy}" r="300" fill="rgba(255,255,255,0.03)"/>
+    <circle cx="${fx}" cy="${fy-210}" r="62" fill="white"/>
+    <rect x="${fx-26}" y="${fy-145}" width="52" height="165" rx="26" fill="white"/>
+    <line x1="${fx-17}" y1="${fy-115}" x2="${fx-130}" y2="${fy-230}" stroke="white" stroke-width="34" stroke-linecap="round"/>
+    <line x1="${fx+17}" y1="${fy-115}" x2="${fx+130}" y2="${fy-230}" stroke="white" stroke-width="34" stroke-linecap="round"/>
+    <line x1="${fx-16}" y1="${fy+20}" x2="${fx-60}" y2="${fy+185}" stroke="white" stroke-width="34" stroke-linecap="round"/>
+    <line x1="${fx+16}" y1="${fy+20}" x2="${fx+60}" y2="${fy+185}" stroke="white" stroke-width="34" stroke-linecap="round"/>
+    <rect x="${fx-115}" y="${fy+185}" width="230" height="190" rx="8" fill="white"/>
+    <rect x="${fx-285}" y="${fy+255}" width="174" height="120" rx="8" fill="white" opacity="0.7"/>
+    <rect x="${fx+111}" y="${fy+290}" width="174" height="85" rx="8" fill="white" opacity="0.5"/>
+    ${lines}
+  </svg>`
+  return `
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:.05;background:repeating-linear-gradient(45deg,#fff,#fff 1px,transparent 1px,transparent 40px)"></div>
+    <div style="position:absolute;inset:30px;border:1px solid rgba(165,180,252,.3);border-radius:20px;pointer-events:none"></div>
+    ${_fSVG}
+    <div style="position:absolute;top:110px;left:0;right:0;text-align:center">
+      <span style="font-size:120px;font-weight:900;letter-spacing:18px;color:#f59e0b">CORE</span>
+      <div style="font-size:38px;letter-spacing:9px;color:rgba(251,191,36,.8);margin-top:8px;font-weight:600">MÉTODO CORE</div>
+      <div style="font-size:28px;color:rgba(148,163,184,.5);margin-top:6px">by Leandro Martins</div>
+    </div>
+    <div style="position:absolute;top:440px;left:80px;right:80px;text-align:center">
+      <div style="font-size:42px;letter-spacing:9px;color:#a5b4fc;font-weight:700;text-transform:uppercase;margin-bottom:14px">✨ DECLARAÇÃO</div>
+      <div style="font-size:46px;letter-spacing:3px;color:rgba(148,163,184,.8);font-weight:600;margin-bottom:36px">DESPERTANDO SEU POTENCIAL</div>
+      <p style="font-size:32px;margin-bottom:28px;font-style:italic;line-height:1.65;color:#e2e8f0">"Eu, <strong style="color:#a5b4fc">${nome}</strong>, sou o único responsável pelos meus resultados. Escolho mudar agora."</p>
+      <p style="font-size:28px;color:rgba(203,213,225,.8);margin-bottom:26px;line-height:1.65">A riqueza, a saúde e a felicidade são meu direito divino. A sabedoria de Deus guia todos os meus passos.</p>
+      <p style="font-size:28px;color:rgba(203,213,225,.8);margin-bottom:26px;line-height:1.65">Meus pensamentos criam minha realidade. Palavras têm poder — escolho sementes de fé, amor e esperança.</p>
+      <p style="font-size:28px;color:rgba(203,213,225,.8);margin-bottom:36px;line-height:1.65">Não existe derrota — existem resultados e aprendizados. Persisto até conquistar tudo que mereço.</p>
+      <div style="font-size:50px;font-weight:900;color:#fff;letter-spacing:4px;margin-bottom:18px;line-height:1.3">EU POSSO!!! EU CONSIGO!!!</div>
+      <div style="font-size:50px;font-weight:900;color:#fff;letter-spacing:4px;margin-bottom:24px">EU MEREÇO!!!</div>
+      <div style="font-size:72px;font-weight:900;color:#a5b4fc;letter-spacing:10px">VITÓRIA!!!</div>
+    </div>
+    <div style="position:absolute;bottom:200px;left:0;right:0;text-align:center">
+      <div style="width:320px;height:1px;background:rgba(165,180,252,.4);margin:0 auto 28px"></div>
+      <div style="font-size:26px;color:rgba(148,163,184,.6);margin-bottom:10px">Assinado em ${data}</div>
+      <div style="font-size:38px;font-weight:700;color:#e2e8f0">${nome}</div>
+    </div>
+    <div style="position:absolute;bottom:90px;left:0;right:0;text-align:center">
+      <div style="font-size:28px;color:rgba(148,163,184,.7);margin-bottom:8px">📱 @coachleandromartins &nbsp;|&nbsp; 📺 @LEANDROMARTINSCOACH</div>
+      <div style="font-size:22px;color:rgba(100,116,139,.6)">App CORE — Método Leandro Martins</div>
+    </div>`
+}
+
+function gerarImagemDeclaracao(abrirModal = true) {
   const nome = S.perfil?.nome || 'Seu Nome'
   const dataAssinatura = S.perfil?.declaracao_data
     ? new Date(S.perfil.declaracao_data).toLocaleDateString('pt-BR')
     : new Date().toLocaleDateString('pt-BR')
-  const html = buildPostHTML(nome, dataAssinatura)
-  // Mesmo HTML em preview (CSS transform 0.4) e render off-screen (1080px nativo)
-  document.getElementById('post-preview').innerHTML = html
-  document.getElementById('post-render').innerHTML  = html
-  openModal('modal-img-post')
+  const isStories = _postFormato === 'stories'
+  const html = isStories ? buildPostHTMLStories(nome, dataAssinatura) : buildPostHTML(nome, dataAssinatura)
+  // Atualiza dimensões do preview
+  const wrap = document.getElementById('post-preview-wrap')
+  const prev = document.getElementById('post-preview')
+  if (wrap && prev) {
+    if (isStories) {
+      wrap.style.width = '243px'; wrap.style.height = '432px'
+      prev.style.width = '1080px'; prev.style.height = '1920px'
+      prev.style.transform = 'scale(0.225)'
+    } else {
+      wrap.style.width = '432px'; wrap.style.height = '432px'
+      prev.style.width = '1080px'; prev.style.height = '1080px'
+      prev.style.transform = 'scale(0.4)'
+    }
+    prev.innerHTML = html
+  }
+  // Off-screen render (native px para html2canvas)
+  const renderWrap = document.getElementById('post-render-wrap')
+  const renderEl   = document.getElementById('post-render')
+  if (renderWrap && renderEl) {
+    renderWrap.style.width = '1080px'
+    renderWrap.style.height = isStories ? '1920px' : '1080px'
+    renderEl.style.width = '1080px'
+    renderEl.style.height = isStories ? '1920px' : '1080px'
+    renderEl.innerHTML = html
+  }
+  if (abrirModal) openModal('modal-img-post')
 }
 
 async function baixarImagemPost() {
-  const btn = event.target
+  const btn = document.getElementById('btn-baixar-post')
+  const isStories = _postFormato === 'stories'
+  const w = 1080, h = isStories ? 1920 : 1080
   btn.textContent = '⏳ Gerando...'
   btn.disabled = true
   try {
     const el = document.getElementById('post-render')
     const canvas = await html2canvas(el, {
-      width:1080, height:1080, scale:1,
-      backgroundColor:'#0f0c29', useCORS:true, logging:false
+      width: w, height: h, scale: 1,
+      backgroundColor: '#0f0c29', useCORS: true, logging: false
     })
     const link = document.createElement('a')
-    link.download = `METODO-CORE-by-Leandro-Martins-declaracao-${new Date().toISOString().slice(0,10)}.png`
+    link.download = `METODO-CORE-by-Leandro-Martins-declaracao-${isStories?'stories':'feed'}-${new Date().toISOString().slice(0,10)}.png`
     link.href = canvas.toDataURL('image/png')
     link.click()
     toast('✅ Imagem baixada! Agora é só postar no Instagram 🚀')
   } catch(e) {
     toast('Erro ao gerar imagem: ' + e.message, false)
   }
-  btn.textContent = '⬇️ Baixar PNG'
+  btn.textContent = isStories ? '⬇️ Baixar PNG 1080×1920' : '⬇️ Baixar PNG 1080×1080'
   btn.disabled = false
 }
 
@@ -1548,7 +1665,7 @@ function renderMasdPilar(pilarId) {
           <p style="font-size:14px;color:#e2e8f0;margin-bottom:10px">${i+1}. ${q}</p>
           <div style="display:flex;gap:6px;flex-wrap:wrap">
             ${opts.map(o=>`
-              <button onclick="setMasdResp('${pilarId}','p${i}','${o.v}',this)"
+              <button data-val="${o.v}" onclick="setMasdResp('${pilarId}','p${i}','${o.v}',this)"
                 style="flex:1;min-width:80px;padding:8px;border-radius:8px;border:2px solid ${resps['p'+i]===o.v?o.c:'#334155'};background:${resps['p'+i]===o.v?o.c+'22':'transparent'};color:${resps['p'+i]===o.v?o.c:'#94a3b8'};cursor:pointer;font-size:12px;font-weight:700;transition:all .2s">
                 ${o.l}
               </button>`).join('')}
@@ -1561,13 +1678,13 @@ function renderMasdPilar(pilarId) {
 function setMasdResp(pilarId, pergId, valor, btn) {
   if (!_masdData[pilarId]) _masdData[pilarId] = {}
   _masdData[pilarId][pergId] = valor
-  btn.closest('.card').querySelectorAll('button').forEach(b => {
-    const v = b.getAttribute('onclick').match(/'(\w+)'\)$/)?.[1]
-    const opt = [{v:'sim',c:'#22c55e'},{v:'mais_ou_menos',c:'#eab308'},{v:'nao',c:'#ef4444'}].find(o=>o.v===v)
-    if (!opt) return
-    b.style.borderColor = v===valor?opt.c:'#334155'
-    b.style.background  = v===valor?opt.c+'22':'transparent'
-    b.style.color       = v===valor?opt.c:'#94a3b8'
+  const opts = {sim:'#22c55e', mais_ou_menos:'#eab308', nao:'#ef4444'}
+  btn.closest('.card').querySelectorAll('button[data-val]').forEach(b => {
+    const v = b.dataset.val
+    const c = opts[v] || '#334155'
+    b.style.borderColor = v===valor ? c : '#334155'
+    b.style.background  = v===valor ? c+'22' : 'transparent'
+    b.style.color       = v===valor ? c : '#94a3b8'
   })
 }
 
@@ -2358,7 +2475,7 @@ function renderAcompMetas(dNums, hoje) {
             <div class="pbar" style="width:80px"><div class="pfill" style="width:${pct}%"></div></div>
           </div>
         </div>
-        <div style="display:flex;gap:4px;flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px">
+        <div style="display:flex;gap:4px;flex-wrap:wrap;padding-bottom:4px">
           ${dNums.map(d => {
             const data = `${S.ano}-${String(S.mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`
             const chk = mChks.find(c => c.data === data)
@@ -2433,29 +2550,46 @@ async function togChk(metaId, data, chkId, status) {
   rdA()
 }
 
+function onMqInput(inp) {
+  if (S._mqTipo !== 'moeda') return
+  // formata como moeda BR enquanto digita
+  let digits = inp.value.replace(/\D/g, '')
+  if (!digits) { inp.value = ''; return }
+  const num = parseInt(digits, 10) / 100
+  inp.value = num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
 function abrirQty(metaId, data, chkId, val, tipo) {
   if (!licOk()) { toast('Período de teste encerrado. Faça o upgrade!', false); return }
   S._mqMeta = metaId; S._mqDia = data; S._mqChk = chkId; S._mqTipo = tipo || 'quantidade'
   const isMoeda = tipo === 'moeda'
   document.getElementById('mq-title').textContent = `Dia ${data.slice(8)} — ${isMoeda ? 'Valor em R$' : 'Registrar quantidade'}`
   const inp = document.getElementById('mq-val')
-  inp.value = val || ''
-  inp.step = isMoeda ? '0.01' : '1'
-  inp.placeholder = isMoeda ? 'Ex: 1500,00' : '0'
-  // prefixo R$
+  inp.inputMode = isMoeda ? 'numeric' : 'decimal'
+  inp.placeholder = isMoeda ? '0,00' : '0'
+  // formata valor existente
+  if (isMoeda && val) {
+    inp.value = Number(val).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  } else {
+    inp.value = val || ''
+  }
+  // label prefix
   let pfx = document.getElementById('mq-prefix')
   if (!pfx) {
     pfx = document.createElement('div')
     pfx.id = 'mq-prefix'
-    pfx.style.cssText = 'font-size:14px;color:#94a3b8;margin-bottom:4px'
+    pfx.style.cssText = 'font-size:13px;color:#94a3b8;margin-bottom:4px'
     inp.parentNode.insertBefore(pfx, inp)
   }
-  pfx.textContent = isMoeda ? '💰 Valor realizado em R$:' : 'Quantidade realizada:'
+  pfx.textContent = isMoeda ? '💰 Valor realizado (R$):' : '🔢 Quantidade realizada:'
   openModal('modal-qty')
 }
 
 async function svChkQ() {
-  const val = +document.getElementById('mq-val').value
+  const raw = document.getElementById('mq-val').value.trim()
+  const val = S._mqTipo === 'moeda'
+    ? parseFloat(raw.replace(/\./g, '').replace(',', '.')) || 0
+    : +raw
   if (isNaN(val) || val < 0) { toast('Informe um valor válido', false); return }
   const chkId = S._mqChk
   const payload = { qtd: val, status: val > 0 ? 'ok' : 'fail' }
@@ -2495,6 +2629,7 @@ function rdR() {
         </select>
         <button class="btn btn-g" onclick="expPDF()">⬇️ PDF</button>
         <button class="btn btn-y" onclick="expPNG()">🖼️ PNG</button>
+        <button class="btn btn-s" onclick="window.print()">🖨️ Imprimir</button>
       </div>
     </div>
     <div id="rel-content">
