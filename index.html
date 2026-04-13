@@ -97,6 +97,25 @@
     #mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     #mob-overlay.show{display:block}
   }
+  /* JORNADA */
+  .jcap{background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px 16px;margin-bottom:10px;cursor:pointer;transition:border-color .2s}
+  .jcap:hover{border-color:#3b82f6}
+  .jcap.lido{border-color:#22c55e;background:#0f2a1a}
+  .jcap.atual{border-color:#f59e0b;background:#1c1a0a}
+  .jcap-header{display:flex;align-items:center;gap:10px}
+  .jcap-num{font-size:11px;font-weight:700;color:#475569;min-width:28px}
+  .jcap-titulo{font-size:14px;font-weight:600;color:#e2e8f0;flex:1}
+  .jcap-status{font-size:18px;min-width:24px;text-align:center}
+  .jcap-body{margin-top:10px;padding-top:10px;border-top:1px solid #334155;display:none}
+  .jcap.open .jcap-body{display:block}
+  .jcap-ferr{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+  .jcap-tag{font-size:11px;background:#1e3a5f;color:#93c5fd;padding:3px 8px;border-radius:20px;cursor:pointer;border:1px solid #2e5a8f}
+  .jcap-tag:hover{background:#2e5a8f}
+  .jstreak{background:linear-gradient(135deg,#1c1a0a,#2d1f00);border:1px solid #f59e0b;border-radius:12px;padding:16px;text-align:center;margin-bottom:20px}
+  .jstreak-num{font-size:48px;font-weight:800;color:#f59e0b;line-height:1}
+  .jprogress-bar{height:10px;background:#1e293b;border-radius:10px;overflow:hidden;margin:8px 0}
+  .jprogress-fill{height:100%;background:linear-gradient(90deg,#22c55e,#3b82f6);border-radius:10px;transition:width .5s}
+  .jnotif-box{background:#1e293b;border:1px solid #334155;border-radius:10px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
   @media print{
     .sidebar,.trial-bar,.toast,.modal-bg,#fireworks-canvas,.celebration-msg,.verse-bar,
     button:not(.no-print),[onclick]{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -229,6 +248,7 @@
       <div style="flex:1;padding:8px 0">
         <div class="sitem active" id="nav-dash" onclick="navTo('dash')">📊 Dashboard</div>
         <div class="sitem" id="nav-guia" onclick="navTo('guia')">📖 Guia CORE</div>
+        <div class="sitem" id="nav-jornada" onclick="navTo('jornada')">📚 Jornada do Leitor</div>
         <div style="font-size:10px;color:#334155;font-weight:700;letter-spacing:2px;padding:8px 16px 2px;text-transform:uppercase">Método CORE</div>
         <div class="sitem" id="nav-cons" onclick="navTo('cons')">🧠 C · Consciência</div>
         <div class="sitem" id="nav-cad" onclick="navTo('cad')">🎯 O · Objetivos</div>
@@ -258,6 +278,7 @@
       <div id="sub-acomp" style="padding:24px;display:none"></div>
       <div id="sub-rel" style="padding:24px;display:none"></div>
       <div id="sub-upgrade" style="padding:24px;display:none"></div>
+      <div id="sub-jornada" style="padding:24px;display:none"></div>
     </main>
   </div>
 </div>
@@ -771,6 +792,7 @@ function navTo(sub) {
   if (sub === 'cons') { rdCons(); return }
   if (sub === 'dash') rdD()
   else if (sub === 'guia') rdGuia()
+  else if (sub === 'jornada') rdJornada()
   else if (sub === 'cad') rdC()
   else if (sub === 'acomp') rdA()
   else if (sub === 'rel') rdR()
@@ -993,6 +1015,7 @@ async function afterLogin() {
   go('app')
   await loadAll()
   navTo('dash')
+  setTimeout(jVerificarLembrete, 2000)
 }
 
 // ============================================================
@@ -3155,6 +3178,218 @@ const _isRecovery = _urlHash.includes('type=recovery')
   }
 })()
 
+// ============================================================
+// JORNADA DO LEITOR CORE
+// ============================================================
+const CAPS_CORE = [
+  { id:0,  label:'Introdução + Apresentação', emoji:'📖', ferrs:[] },
+  { id:1,  label:'Cap 1 — O Despertar',                    emoji:'🌅', ferrs:[] },
+  { id:2,  label:'Cap 2 — A Vida no Automático',           emoji:'🤖', ferrs:[{n:'Diário de Autoconsciência',nav:'cons'}] },
+  { id:3,  label:'Cap 3 — MAAS e MASD: Lendo sua Realidade', emoji:'🔍', ferrs:[{n:'MAAS — Painel da Realidade',nav:'cons'},{n:'MASD — Diagnóstico de Profundidade',nav:'cons'}] },
+  { id:4,  label:'Cap 4 — Valores, Crenças e Congruência', emoji:'💎', ferrs:[{n:'Inventário de Crenças',nav:'cons'},{n:'Mapa de Valores',nav:'cons'}] },
+  { id:5,  label:'Cap 5 — Sonhos que Têm Verdade',         emoji:'✨', ferrs:[{n:'Propósito de Vida',nav:'cons'}] },
+  { id:6,  label:'Cap 6 — Visão Positiva de Futuro',       emoji:'🔭', ferrs:[{n:'Visão de Futuro',nav:'cad'}] },
+  { id:7,  label:'Cap 7 — Objetivos com Clareza e Direção',emoji:'🎯', ferrs:[{n:'Método SMART CORE',nav:'cad'},{n:'Mapa de Objetivos',nav:'cad'}] },
+  { id:8,  label:'Cap 8 — Transformando Objetivos em Metas e Rotas', emoji:'🗺️', ferrs:[{n:'SOL — Sistema de Objetivos e Lacunas',nav:'cad'}] },
+  { id:9,  label:'Cap 9 — O Fim da Procrastinação Emocional', emoji:'⚡', ferrs:[{n:'Mapa de Zonas',nav:'cons'}] },
+  { id:10, label:'Cap 10 — Disciplina Maior que Motivação',emoji:'🏋️', ferrs:[{n:'Mapa de Hábitos',nav:'rel'},{n:'Painel de Constância',nav:'acomp'}] },
+  { id:11, label:'Cap 11 — Foco, Tempo e Prioridade',      emoji:'⏱️', ferrs:[{n:'Audit de Tempo',nav:'cons'},{n:'Sistema de Prioridades',nav:'acomp'}] },
+  { id:12, label:'Cap 12 — Ação Ampliada',                 emoji:'🚀', ferrs:[{n:'Plano de 90 Dias',nav:'acomp'},{n:'Sistema de Metas Diárias',nav:'acomp'}] },
+  { id:13, label:'Cap 13 — Identidade, Autoimagem e Fortalecimento do Eu', emoji:'🪞', ferrs:[{n:'Declaração de Identidade',nav:'cons'}] },
+  { id:14, label:'Cap 14 — Gratidão, Relações e Contribuição', emoji:'🙏', ferrs:[{n:'Diário de Gratidão',nav:'rel'}] },
+  { id:15, label:'Cap 15 — O Ciclo do Bem',                emoji:'🔄', ferrs:[{n:'Plano de Mentoria',nav:'rel'}] },
+  { id:16, label:'Cap 16 — Missão, Legado e Expansão da Vida', emoji:'🌍', ferrs:[{n:'Legado e Contribuição',nav:'rel'}] },
+  { id:17, label:'Cap 17 — O Ciclo Infinito da Evolução',  emoji:'♾️', ferrs:[{n:'Plano de Evolução Contínua',nav:'rel'}] },
+  { id:18, label:'Conclusão — O CORE Não Termina Aqui',    emoji:'🏆', ferrs:[] },
+]
+
+function jKey() { return 'core_jornada_' + (S.user?.id || 'guest') }
+
+function jLoad() {
+  try { return JSON.parse(localStorage.getItem(jKey()) || '{}') } catch { return {} }
+}
+
+function jSave(d) { localStorage.setItem(jKey(), JSON.stringify(d)) }
+
+function jCalcStreak(d) {
+  const datas = Object.values(d.caps || {})
+    .filter(c => c.dataLido)
+    .map(c => c.dataLido)
+  const unique = [...new Set(datas)].sort().reverse()
+  if (!unique.length) return 0
+  let streak = 0
+  const hoje = new Date().toISOString().slice(0,10)
+  let cur = hoje
+  for (const dt of unique) {
+    if (dt === cur) { streak++; const d2 = new Date(cur); d2.setDate(d2.getDate()-1); cur = d2.toISOString().slice(0,10) }
+    else if (dt < cur) break
+  }
+  return streak
+}
+
+function jCapAbrir(id) {
+  document.querySelectorAll('.jcap').forEach(el => { if (el.dataset.id != id) el.classList.remove('open') })
+  document.querySelector(`.jcap[data-id="${id}"]`)?.classList.toggle('open')
+}
+
+function jMarcarLido(id) {
+  const d = jLoad()
+  if (!d.caps) d.caps = {}
+  const hoje = new Date().toISOString().slice(0,10)
+  if (d.caps[id]?.lido) {
+    delete d.caps[id]
+  } else {
+    d.caps[id] = { lido: true, dataLido: hoje, atividade: d.caps[id]?.atividade || false }
+  }
+  jSave(d)
+  rdJornada()
+  ganharXP(5)
+}
+
+function jMarcarAtividade(id) {
+  const d = jLoad()
+  if (!d.caps) d.caps = {}
+  const hoje = new Date().toISOString().slice(0,10)
+  if (!d.caps[id]) d.caps[id] = { lido: false, dataLido: null, atividade: false }
+  d.caps[id].atividade = !d.caps[id].atividade
+  jSave(d)
+  rdJornada()
+  if (d.caps[id].atividade) ganharXP(10)
+}
+
+async function jSolicitarNotificacao() {
+  if (!('Notification' in window)) { toast('Seu navegador não suporta notificações', false); return }
+  const perm = await Notification.requestPermission()
+  if (perm === 'granted') {
+    const d = jLoad(); d.notif = true; jSave(d)
+    toast('Lembretes ativados! ✅')
+    rdJornada()
+    new Notification('CORE — Lembretes Ativados! 📚', { body: 'Você receberá lembretes diários para ler e praticar.', icon: '/favicon.ico' })
+  } else {
+    toast('Permissão de notificação negada', false)
+  }
+}
+
+function jDesativarNotificacao() {
+  const d = jLoad(); d.notif = false; jSave(d)
+  toast('Lembretes desativados')
+  rdJornada()
+}
+
+function jVerificarLembrete() {
+  const d = jLoad()
+  if (!d.notif) return
+  if (!('Notification' in window) || Notification.permission !== 'granted') return
+  const hoje = new Date().toISOString().slice(0,10)
+  if (d.ultimoLembrete === hoje) return
+  const lidos = Object.values(d.caps || {}).filter(c => c.lido).length
+  const proximo = CAPS_CORE.find(c => !d.caps?.[c.id]?.lido)
+  if (proximo) {
+    new Notification('📚 Continue sua Jornada CORE!', {
+      body: `Que tal ler hoje o ${proximo.label}? Você já leu ${lidos} de ${CAPS_CORE.length} capítulos.`,
+      icon: '/favicon.ico'
+    })
+    d.ultimoLembrete = hoje
+    jSave(d)
+  }
+}
+
+function rdJornada() {
+  const el = document.getElementById('sub-jornada')
+  const d = jLoad()
+  const caps = d.caps || {}
+  const totalLidos = Object.values(caps).filter(c => c.lido).length
+  const totalAtiv  = Object.values(caps).filter(c => c.atividade).length
+  const total = CAPS_CORE.length
+  const pct = Math.round(totalLidos / total * 100)
+  const streak = jCalcStreak(d)
+  const notifAtiva = d.notif && Notification.permission === 'granted'
+  const hoje = new Date().toISOString().slice(0,10)
+
+  // Notificação box
+  const notifHtml = ('Notification' in window) ? `
+    <div class="jnotif-box">
+      <span style="font-size:24px">🔔</span>
+      <div style="flex:1">
+        <div style="font-weight:600;color:#e2e8f0;font-size:13px">Lembrete Diário</div>
+        <div style="font-size:12px;color:#64748b">${notifAtiva ? 'Lembretes ativados — você será notificado diariamente' : 'Ative para receber um lembrete diário de leitura'}</div>
+      </div>
+      ${notifAtiva
+        ? `<button class="btn btn-s" onclick="jDesativarNotificacao()" style="font-size:12px;background:#450a0a;border-color:#991b1b">Desativar</button>`
+        : `<button class="btn btn-p" onclick="jSolicitarNotificacao()" style="font-size:12px">Ativar Lembretes</button>`}
+    </div>` : ''
+
+  el.innerHTML = `
+    <div style="max-width:680px">
+      <h2 style="font-size:22px;font-weight:800;color:#f1f5f9;margin:0 0 4px">📚 Jornada do Leitor CORE</h2>
+      <p style="color:#64748b;font-size:13px;margin:0 0 20px">Marque os capítulos lidos e acesse as ferramentas de cada etapa.</p>
+
+      ${notifHtml}
+
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px">
+        <div class="jstreak" style="margin:0">
+          <div class="jstreak-num">${streak}</div>
+          <div style="font-size:11px;color:#f59e0b;font-weight:600;margin-top:4px">🔥 Dias seguidos</div>
+        </div>
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:36px;font-weight:800;color:#3b82f6">${totalLidos}</div>
+          <div style="font-size:11px;color:#64748b;font-weight:600;margin-top:4px">📖 Caps lidos</div>
+        </div>
+        <div style="background:#1e293b;border:1px solid #334155;border-radius:12px;padding:16px;text-align:center">
+          <div style="font-size:36px;font-weight:800;color:#22c55e">${totalAtiv}</div>
+          <div style="font-size:11px;color:#64748b;font-weight:600;margin-top:4px">✅ Atividades feitas</div>
+        </div>
+      </div>
+
+      <div style="margin-bottom:20px">
+        <div style="display:flex;justify-content:space-between;font-size:12px;color:#64748b;margin-bottom:4px">
+          <span>Progresso de leitura</span><span>${pct}% — ${totalLidos}/${total} capítulos</span>
+        </div>
+        <div class="jprogress-bar"><div class="jprogress-fill" style="width:${pct}%"></div></div>
+      </div>
+
+      <div>
+        ${CAPS_CORE.map(cap => {
+          const c = caps[cap.id] || {}
+          const lido = !!c.lido
+          const ativ = !!c.atividade
+          // próximo a ler = primeiro não lido
+          const ehAtual = !lido && CAPS_CORE.filter(x => !caps[x.id]?.lido)[0]?.id === cap.id
+          return `
+          <div class="jcap ${lido?'lido':''} ${ehAtual?'atual':''}" data-id="${cap.id}" onclick="jCapAbrir(${cap.id})">
+            <div class="jcap-header">
+              <span class="jcap-num">${cap.id === 0 ? 'Intro' : cap.id === 18 ? 'Fim' : String(cap.id).padStart(2,'0')}</span>
+              <span class="jcap-status">${lido ? '✅' : ehAtual ? '👉' : '○'}</span>
+              <span class="jcap-titulo">${cap.emoji} ${cap.label}</span>
+              <span style="color:#475569;font-size:12px">▾</span>
+            </div>
+            <div class="jcap-body">
+              ${cap.ferrs.length ? `
+                <div style="font-size:11px;color:#64748b;margin-bottom:6px;font-weight:600">FERRAMENTAS DO APP</div>
+                <div class="jcap-ferr">
+                  ${cap.ferrs.map(f=>`<span class="jcap-tag" onclick="event.stopPropagation();navTo('${f.nav}')">🔧 ${f.n}</span>`).join('')}
+                </div>` : ''}
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
+                <button class="btn ${lido?'btn-s':'btn-p'}" style="font-size:12px;padding:6px 14px" onclick="event.stopPropagation();jMarcarLido(${cap.id})">
+                  ${lido ? '↩ Desmarcar leitura' : '📖 Marcar como lido'}
+                </button>
+                ${lido ? `<button class="btn btn-s" style="font-size:12px;padding:6px 14px;${ativ?'background:#14532d;border-color:#22c55e;color:#86efac':''}" onclick="event.stopPropagation();jMarcarAtividade(${cap.id})">
+                  ${ativ ? '✅ Atividade feita' : '○ Fazer atividade'}
+                </button>` : ''}
+              </div>
+              ${c.dataLido ? `<div style="font-size:11px;color:#475569;margin-top:8px">Lido em ${c.dataLido}</div>` : ''}
+            </div>
+          </div>`
+        }).join('')}
+      </div>
+    </div>`
+
+  // Abre automaticamente o próximo capítulo
+  const prox = CAPS_CORE.find(c => !caps[c.id]?.lido)
+  if (prox) setTimeout(() => document.querySelector(`.jcap[data-id="${prox.id}"]`)?.classList.add('open'), 50)
+}
+
+// ============================================================
 // Listen auth changes
 db.auth.onAuthStateChange(async (event, session) => {
   if (event === 'PASSWORD_RECOVERY') {
