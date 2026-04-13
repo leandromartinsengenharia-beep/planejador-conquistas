@@ -436,6 +436,29 @@
   </div>
 </div>
 
+<!-- Modal Coach de Resultados -->
+<div id="modal-coach" class="modal-bg">
+  <div class="modal" style="max-width:520px">
+    <div id="coach-header" style="text-align:center;margin-bottom:20px">
+      <div id="coach-emoji" style="font-size:56px;margin-bottom:8px"></div>
+      <h3 id="coach-titulo" style="font-size:20px;font-weight:800;color:#e2e8f0;margin-bottom:4px"></h3>
+      <p id="coach-subtitulo" style="font-size:13px;color:#64748b"></p>
+    </div>
+    <!-- Perguntas -->
+    <div id="coach-perguntas" style="display:flex;flex-direction:column;gap:14px;margin-bottom:20px"></div>
+    <!-- Análise IA -->
+    <div id="coach-ia-wrap" style="display:none;margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:#a5b4fc;margin-bottom:8px;letter-spacing:1px">🧠 ANÁLISE DO COACH</div>
+      <div id="coach-ia-resp" style="background:#0f172a;border:1px solid #6366f1;border-radius:10px;padding:14px;font-size:14px;color:#e2e8f0;line-height:1.7;white-space:pre-wrap"></div>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="btn-coach-ia" class="btn btn-p" onclick="coachAnalisarIA()" style="flex:1;padding:11px">🧠 Analisar com IA</button>
+      <button id="btn-coach-ok" class="btn btn-g" onclick="coachSalvar()" style="flex:1;padding:11px">✅ Salvar reflexão</button>
+      <button class="btn btn-s" onclick="closeModal('modal-coach')" style="padding:11px 16px">Fechar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Compartilhar Conquista de Meta -->
 <div id="modal-conquista" class="modal-bg">
   <div class="modal" style="max-width:540px">
@@ -1432,6 +1455,162 @@ function setPostFormato(f) {
     document.getElementById('btn-baixar-post').textContent = '⬇️ Baixar PNG 1080×1080'
   }
   gerarImagemDeclaracao(false) // re-render without reopening modal
+}
+
+// ── COACH DE RESULTADOS ────────────────────────────────────────────────────
+let _coachCtx = null  // { meta, tipo: 'concluida'|'nao_concluida', obj, area }
+
+function coachVerificarMeta(metaId) {
+  const m = S.metas.find(x => x.id === metaId)
+  if (!m) return
+  const o = S.objs.find(x => x.id === m.obj_id)
+  const a = S.areas.find(x => x.id === o?.area_id)
+  const mChks = S.chks.filter(c => c.meta_id === m.id)
+  const diasMes = new Date(S.ano, S.mes, 0).getDate()
+  const pct = calcPct(m, mChks, diasMes)
+  const hoje = new Date().toISOString().slice(0,10)
+  const vencida = m.fim && m.fim < hoje && pct < 100
+
+  if (pct >= 100) {
+    _abrirCoachModal(m, o, a, 'concluida')
+  } else if (vencida) {
+    _abrirCoachModal(m, o, a, 'nao_concluida')
+  }
+}
+
+function _abrirCoachModal(m, o, a, tipo) {
+  _coachCtx = { meta: m, obj: o, area: a, tipo }
+  const isConcluida = tipo === 'concluida'
+
+  document.getElementById('coach-emoji').textContent = isConcluida ? '\U0001f3c6' : '\U0001f4aa'
+  document.getElementById('coach-titulo').textContent = isConcluida
+    ? `Meta Conclu\u00edda: ${m.nome}`
+    : `Meta com prazo vencido: ${m.nome}`
+  document.getElementById('coach-subtitulo').textContent = isConcluida
+    ? 'Parab\u00e9ns! Reflita sobre sua conquista.'
+    : `Prazo encerrado em ${m.fim ? new Date(m.fim+'T12:00:00').toLocaleDateString('pt-BR') : '?'} \u2014 vamos entender o que aconteceu.`
+
+  const pergs = isConcluida ? [
+    { id:'cq-aprendizados', label:'\U0001f4da Quais foram seus principais aprendizados conquistando esta meta?', placeholder:'Ex: aprendi que consistência é mais importante que intensidade...' },
+    { id:'cq-recompensas',  label:'\U0001f381 Quais recompensas você obteve ou vai se dar por esta conquista?',   placeholder:'Ex: vou comemorar com minha família, comprar algo que queria...' },
+    { id:'cq-proximo',      label:'\U0001f680 Qual é o próximo passo após esta conquista?',                        placeholder:'Ex: agora vou elevar a meta para o próximo nível...' }
+  ] : [
+    { id:'cq-interferiu', label:'\U0001f914 O que interferiu para não concluir no prazo?',                         placeholder:'Ex: falta de tempo, imprevistos, subestimei o esforço...' },
+    { id:'cq-diferente',  label:'\U0001f504 O que você fará de diferente para realizar esta meta?',                placeholder:'Ex: vou reservar horário fixo, pedir ajuda, quebrar em etapas...' },
+    { id:'cq-novaData',   label:'\U0001f4c5 Quer ajustar a data de conclusão? (deixe em branco para manter)',      placeholder:'Ex: 30/06/2026 ou deixe vazio' }
+  ]
+
+  document.getElementById('coach-perguntas').innerHTML = pergs.map(p => `
+    <div>
+      <label class="lbl" style="font-size:13px;color:#94a3b8;margin-bottom:6px;display:block">${p.label}</label>
+      <textarea id="${p.id}" class="inp" style="min-height:70px;resize:vertical" placeholder="${p.placeholder}"></textarea>
+    </div>`).join('')
+
+  document.getElementById('coach-ia-wrap').style.display = 'none'
+  document.getElementById('coach-ia-resp').textContent = ''
+  openModal('modal-coach')
+}
+
+async function coachAnalisarIA() {
+  const btn = document.getElementById('btn-coach-ia')
+  if (!_coachCtx) return
+  const isConcluida = _coachCtx.tipo === 'concluida'
+  const respostas = isConcluida ? {
+    aprendizados: document.getElementById('cq-aprendizados')?.value || '',
+    recompensas:  document.getElementById('cq-recompensas')?.value || '',
+    proximo:      document.getElementById('cq-proximo')?.value || ''
+  } : {
+    interferiu: document.getElementById('cq-interferiu')?.value || '',
+    diferente:  document.getElementById('cq-diferente')?.value || '',
+    novaData:   document.getElementById('cq-novaData')?.value || ''
+  }
+
+  const metaNome = _coachCtx.meta.nome
+  const objNome  = _coachCtx.obj?.nome || ''
+
+  let prompt
+  if (isConcluida) {
+    prompt = `Você é um coach de alto desempenho. O usuário concluiu 100% da meta "${metaNome}" (objetivo: "${objNome}").
+
+Respostas dele:
+- Aprendizados: ${respostas.aprendizados || '(não preenchido)'}
+- Recompensas: ${respostas.recompensas || '(não preenchido)'}
+- Próximo passo: ${respostas.proximo || '(não preenchido)'}
+
+Faça uma análise motivacional e de crescimento em 3-4 parágrafos curtos. Celebre a conquista, aprofunde os aprendizados, e sugira como ele pode escalar ainda mais no próximo ciclo. Seja direto, inspirador e prático. Responda em português.`
+  } else {
+    prompt = `Você é um coach de alto desempenho. O usuário não concluiu a meta "${metaNome}" (objetivo: "${objNome}") no prazo.
+
+Respostas dele:
+- O que interferiu: ${respostas.interferiu || '(não preenchido)'}
+- O que fará diferente: ${respostas.diferente || '(não preenchido)'}
+- Nova data sugerida: ${respostas.novaData || '(não informado)'}
+
+Faça uma análise de coach em 3-4 parágrafos curtos. Sem julgamentos — identifique padrões que podem estar sabotando, valide o esforço, sugira 2-3 ações concretas e específicas para que ele consiga desta vez. Seja empático, direto e prático. Responda em português.`
+  }
+
+  btn.textContent = '\u23f3 Analisando...'
+  btn.disabled = true
+  document.getElementById('coach-ia-wrap').style.display = 'block'
+  document.getElementById('coach-ia-resp').textContent = 'Aguarde...'
+
+  try {
+    const key = cfgGet().gemini
+    if (!key) throw new Error('Configure a chave Gemini em Configurações')
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+    })
+    const data = await r.json()
+    const resp = data?.candidates?.[0]?.content?.parts?.[0]?.text || 'Sem resposta da IA.'
+    document.getElementById('coach-ia-resp').textContent = resp
+  } catch(e) {
+    document.getElementById('coach-ia-resp').textContent = 'Erro: ' + e.message
+  }
+  btn.textContent = '\U0001f9e0 Analisar com IA'
+  btn.disabled = false
+}
+
+async function coachSalvar() {
+  if (!_coachCtx || !S.user) { closeModal('modal-coach'); return }
+  const isConcluida = _coachCtx.tipo === 'concluida'
+  const iaResp = document.getElementById('coach-ia-resp')?.textContent || ''
+
+  const reflexao = isConcluida ? {
+    tipo: 'concluida',
+    aprendizados: document.getElementById('cq-aprendizados')?.value || '',
+    recompensas:  document.getElementById('cq-recompensas')?.value || '',
+    proximo:      document.getElementById('cq-proximo')?.value || '',
+    ia: iaResp, data: new Date().toISOString()
+  } : {
+    tipo: 'nao_concluida',
+    interferiu: document.getElementById('cq-interferiu')?.value || '',
+    diferente:  document.getElementById('cq-diferente')?.value || '',
+    novaData:   document.getElementById('cq-novaData')?.value || '',
+    ia: iaResp, data: new Date().toISOString()
+  }
+
+  // Salvar reflexão na meta (campo extra no localStorage por enquanto)
+  const key = `core_reflexao_${_coachCtx.meta.id}`
+  localStorage.setItem(key, JSON.stringify(reflexao))
+
+  // Se ajustou data
+  if (!isConcluida && reflexao.novaData) {
+    const partes = reflexao.novaData.replace(/\//g,'-').split('-')
+    let novaDataISO
+    if (partes.length === 3) {
+      novaDataISO = partes[0].length === 4
+        ? reflexao.novaData.replace(/\//g,'-')
+        : `${partes[2]}-${partes[1].padStart(2,'0')}-${partes[0].padStart(2,'0')}`
+      await db.from('metas').update({ fim: novaDataISO }).eq('id', _coachCtx.meta.id)
+      await rcMetas()
+      toast('Data ajustada para ' + new Date(novaDataISO+'T12:00:00').toLocaleDateString('pt-BR'))
+    }
+  }
+
+  closeModal('modal-coach')
+  toast(isConcluida ? '\U0001f4aa Reflexão salva! Continue evoluindo!' : '\U0001f4aa Reflexão salva! Agora bora realizar!')
 }
 
 // ── CONQUISTA DE META ──────────────────────────────────────────────────────
@@ -2746,6 +2925,8 @@ async function togChk(metaId, data, chkId, status) {
   if (err) { toast('Erro ao salvar: ' + (err.message || err.code), false); return }
   await rcChk()
   rdA()
+  // Verificar se meta atingiu 100% ou venceu
+  setTimeout(() => coachVerificarMeta(metaId), 400)
 }
 
 function onMqInput(inp) {
@@ -2806,6 +2987,7 @@ async function svChkQ() {
   closeModal('modal-qty')
   await rcChk()
   rdA()
+  setTimeout(() => coachVerificarMeta(S._mqMeta), 400)
 }
 
 // ============================================================
