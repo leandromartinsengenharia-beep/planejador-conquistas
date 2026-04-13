@@ -1036,6 +1036,8 @@ async function doLogout() {
 }
 
 async function afterLogin() {
+  if (S.tela === 'app') return  // evita chamada dupla (doLogin + onAuthStateChange)
+  go('app')  // muda tela antes do primeiro await para travar chamada dupla
   // load perfil
   const { data } = await db.from('usuarios').select('*').eq('id', S.user.id).single()
   S.perfil = data
@@ -1060,7 +1062,6 @@ async function afterLogin() {
     if (dias > 0) tb.textContent = `⏳ Período de teste: ${dias} dia${dias !== 1 ? 's' : ''} restante${dias !== 1 ? 's' : ''} — Faça upgrade para continuar após o vencimento`
     else { tb.textContent = '⚠️ Seu período gratuito encerrou. Faça o upgrade para continuar usando.'; tb.style.background = '#450a0a'; tb.style.borderColor = '#991b1b'; tb.style.color = '#fca5a5' }
   } else tb.style.display = 'none'
-  go('app')
   await loadAll()
   await jSyncFromCloud()
   navTo('dash')
