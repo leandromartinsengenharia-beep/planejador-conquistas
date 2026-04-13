@@ -84,6 +84,21 @@ CREATE POLICY "metas_own"     ON public.metas     FOR ALL USING (auth.uid() = us
 CREATE POLICY "checkins_own"  ON public.checkins  FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================
+-- JORNADA DO LEITOR CORE
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.jornada (
+  user_id     UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  caps        JSONB DEFAULT '{}'::jsonb,
+  notif       BOOLEAN DEFAULT false,
+  updated_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.jornada ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "jornada_own" ON public.jornada;
+CREATE POLICY "jornada_own" ON public.jornada FOR ALL USING (auth.uid() = user_id);
+
+-- ============================================================
 -- TRIGGER: cria perfil automaticamente ao cadastrar
 -- ============================================================
 

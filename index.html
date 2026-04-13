@@ -1014,6 +1014,7 @@ async function afterLogin() {
   } else tb.style.display = 'none'
   go('app')
   await loadAll()
+  await jSyncFromCloud()
   navTo('dash')
   setTimeout(jVerificarLembrete, 2000)
 }
@@ -3209,7 +3210,34 @@ function jLoad() {
   try { return JSON.parse(localStorage.getItem(jKey()) || '{}') } catch { return {} }
 }
 
-function jSave(d) { localStorage.setItem(jKey(), JSON.stringify(d)) }
+function jSave(d) {
+  localStorage.setItem(jKey(), JSON.stringify(d))
+  // sync to cloud (fire-and-forget)
+  if (S.user) {
+    db.from('jornada').upsert({
+      user_id: S.user.id,
+      caps: d.caps || {},
+      notif: !!d.notif,
+      updated_at: new Date().toISOString()
+    }, { onConflict: 'user_id' }).then(({ error }) => {
+      if (error) console.warn('jornada sync error:', error.message)
+    })
+  }
+}
+
+async function jSyncFromCloud() {
+  if (!S.user) return
+  const { data, error } = await db.from('jornada').select('*').eq('user_id', S.user.id).single()
+  if (error || !data) return
+  const local = jLoad()
+  // merge: cloud wins for lido/atividade (mais confiável), manter notif local
+  const merged = {
+    caps: data.caps || {},
+    notif: local.notif ?? data.notif,
+    ultimoLembrete: local.ultimoLembrete
+  }
+  localStorage.setItem(jKey(), JSON.stringify(merged))
+}
 
 function jCalcStreak(d) {
   const datas = Object.values(d.caps || {})
