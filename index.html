@@ -436,6 +436,28 @@
   </div>
 </div>
 
+<!-- Modal Compartilhar Conquista de Meta -->
+<div id="modal-conquista" class="modal-bg">
+  <div class="modal" style="max-width:540px">
+    <h3 style="font-size:16px;font-weight:700;margin-bottom:8px">🏆 Compartilhar Conquista</h3>
+    <div style="display:flex;gap:4px;margin-bottom:12px;background:#0f172a;padding:4px;border-radius:8px;width:fit-content">
+      <button id="cq-fmt-feed"    class="tab-btn active" onclick="setCqFormato('feed')"   >◻️ Feed 1:1</button>
+      <button id="cq-fmt-stories" class="tab-btn"        onclick="setCqFormato('stories')">📱 Stories 9:16</button>
+    </div>
+    <div id="cq-preview-wrap" style="border-radius:12px;overflow:hidden;margin:0 auto 14px;border:1px solid #334155;width:432px;height:432px;position:relative;background:linear-gradient(135deg,#1c1a0a,#2d1f00)">
+      <div id="cq-preview" style="width:1080px;height:1080px;transform:scale(0.4);transform-origin:top left;position:absolute;top:0;left:0;font-family:'Segoe UI',sans-serif;position:relative"></div>
+    </div>
+    <div style="display:flex;gap:8px">
+      <button id="btn-baixar-cq" class="btn btn-p" onclick="baixarConquista()" style="flex:1;padding:12px">⬇️ Baixar PNG</button>
+      <button class="btn btn-s" onclick="closeModal('modal-conquista')" style="flex:1;padding:12px">Fechar</button>
+    </div>
+  </div>
+</div>
+<!-- Canvas oculto para render da conquista -->
+<div id="cq-render-wrap" style="position:fixed;left:-9999px;top:-9999px;width:1080px;height:1080px;overflow:hidden">
+  <div id="cq-render" style="width:1080px;height:1080px;font-family:'Segoe UI',sans-serif;position:relative"></div>
+</div>
+
 <!-- Canvas oculto para geração da imagem (feed 1080x1080 / stories 1080x1920) -->
 <div id="post-render-wrap" style="position:fixed;left:-9999px;top:-9999px;width:1080px;height:1080px;overflow:hidden">
   <div id="post-render" style="width:1080px;height:1080px;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);font-family:'Segoe UI',sans-serif;position:relative">
@@ -1017,6 +1039,10 @@ async function afterLogin() {
   await jSyncFromCloud()
   navTo('dash')
   setTimeout(jVerificarLembrete, 2000)
+  // Ping a cada 10 min para manter projeto Supabase ativo
+  setInterval(() => {
+    if (S.user) db.from('usuarios').select('id').eq('id', S.user.id).limit(1).then(() => {})
+  }, 10 * 60 * 1000)
 }
 
 // ============================================================
@@ -1406,6 +1432,151 @@ function setPostFormato(f) {
     document.getElementById('btn-baixar-post').textContent = '⬇️ Baixar PNG 1080×1080'
   }
   gerarImagemDeclaracao(false) // re-render without reopening modal
+}
+
+// ── CONQUISTA DE META ──────────────────────────────────────────────────────
+let _cqFormato = 'feed'
+let _cqMeta = null
+
+function setCqFormato(fmt) {
+  _cqFormato = fmt
+  document.getElementById('cq-fmt-feed').classList.toggle('active', fmt === 'feed')
+  document.getElementById('cq-fmt-stories').classList.toggle('active', fmt === 'stories')
+  if (_cqMeta) _renderCqPreview()
+}
+
+function abrirConquistaPost(metaId) {
+  const m = S.metas.find(x => x.id === metaId)
+  if (!m) return
+  const o = S.objs.find(x => x.id === m.obj_id)
+  const a = S.areas.find(x => x.id === o?.area_id)
+  const mChks = S.chks.filter(c => c.meta_id === m.id)
+  const diasMes = new Date(S.ano, S.mes, 0).getDate()
+  const pct = calcPct(m, mChks, diasMes)
+  _cqMeta = { nome: m.nome, pct, objNome: o?.nome || '', areaNome: (a?.icon||'') + ' ' + (a?.nome||''), tipo: fmtTipoMeta(m) }
+  _cqFormato = 'feed'
+  document.getElementById('cq-fmt-feed').classList.add('active')
+  document.getElementById('cq-fmt-stories').classList.remove('active')
+  _renderCqPreview()
+  openModal('modal-conquista')
+}
+
+function _renderCqPreview() {
+  const isSt = _cqFormato === 'stories'
+  const nome = S.perfil?.nome || 'Voc\u00ea'
+  const html = isSt ? buildPostConquistaHTMLStories(nome, _cqMeta) : buildPostConquistaHTML(nome, _cqMeta)
+  const wrap = document.getElementById('cq-preview-wrap')
+  const prev = document.getElementById('cq-preview')
+  if (isSt) {
+    wrap.style.width = '243px'; wrap.style.height = '432px'
+    prev.style.width = '1080px'; prev.style.height = '1920px'
+    prev.style.transform = 'scale(0.225)'
+  } else {
+    wrap.style.width = '432px'; wrap.style.height = '432px'
+    prev.style.width = '1080px'; prev.style.height = '1080px'
+    prev.style.transform = 'scale(0.4)'
+  }
+  prev.innerHTML = html
+  const rWrap = document.getElementById('cq-render-wrap')
+  const rEl   = document.getElementById('cq-render')
+  rWrap.style.width = '1080px'; rWrap.style.height = isSt ? '1920px' : '1080px'
+  rEl.style.width   = '1080px'; rEl.style.height   = isSt ? '1920px' : '1080px'
+  rEl.innerHTML = html
+}
+
+function buildPostConquistaHTML(nome, meta) {
+  const cor = meta.pct >= 100 ? '#f59e0b' : '#22c55e'
+  const emoji = meta.pct >= 100 ? '\U0001f3c6' : '\u2b50'
+  const titulo = meta.pct >= 100 ? 'META 100% CONQUISTADA!' : `META ${meta.pct}% CONCLU\u00cdDA!`
+  return `
+    <div style="position:absolute;inset:0;background:linear-gradient(135deg,#1c1200,#2d1f00,#0f172a);"></div>
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:.04;background:repeating-linear-gradient(45deg,#fff,#fff 1px,transparent 1px,transparent 40px)"></div>
+    <div style="position:absolute;inset:24px;border:2px solid ${cor}44;border-radius:20px;pointer-events:none"></div>
+    <svg xmlns="http://www.w3.org/2000/svg" width="1080" height="1080" style="position:absolute;top:0;left:0;pointer-events:none;opacity:.07">
+      <circle cx="540" cy="540" r="400" fill="none" stroke="${cor}" stroke-width="2"/>
+      <circle cx="540" cy="540" r="300" fill="none" stroke="${cor}" stroke-width="1"/>
+    </svg>
+    <div style="position:absolute;top:60px;left:0;right:0;text-align:center">
+      <span style="font-size:74px;font-weight:900;letter-spacing:12px;color:#f59e0b">CORE</span>
+      <div style="font-size:22px;letter-spacing:7px;color:rgba(251,191,36,.7);margin-top:4px;font-weight:600">M\u00c9TODO CORE</div>
+    </div>
+    <div style="position:absolute;top:210px;left:0;right:0;text-align:center">
+      <div style="font-size:110px;line-height:1">${emoji}</div>
+      <div style="font-size:52px;font-weight:900;color:${cor};letter-spacing:3px;margin-top:12px;line-height:1.1">${titulo}</div>
+    </div>
+    <div style="position:absolute;top:480px;left:60px;right:60px;text-align:center">
+      <div style="font-size:38px;font-weight:700;color:#e2e8f0;margin-bottom:12px;line-height:1.2">${meta.nome}</div>
+      <div style="font-size:22px;color:rgba(148,163,184,.7);margin-bottom:24px">${meta.areaNome} \u203a ${meta.objNome}</div>
+      <div style="display:inline-block;background:${cor}22;border:2px solid ${cor};border-radius:20px;padding:14px 40px">
+        <span style="font-size:80px;font-weight:900;color:${cor};line-height:1">${meta.pct}%</span>
+        <div style="font-size:22px;color:${cor};font-weight:600">DE CONCLUS\u00c3O</div>
+      </div>
+    </div>
+    <div style="position:absolute;bottom:160px;left:60px;right:60px;text-align:center">
+      <div style="width:260px;height:1px;background:${cor}55;margin:0 auto 20px"></div>
+      <div style="font-size:28px;font-weight:700;color:#e2e8f0">${nome}</div>
+      <div style="font-size:20px;color:rgba(148,163,184,.6);margin-top:6px">alcan\u00e7ou mais um n\u00edvel de evolu\u00e7\u00e3o</div>
+    </div>
+    <div style="position:absolute;bottom:56px;left:0;right:0;text-align:center">
+      <div style="font-size:21px;color:rgba(148,163,184,.6)">\U0001f4f1 @coachleandromartins &nbsp;|&nbsp; \U0001f4fa @LEANDROMARTINSCOACH</div>
+      <div style="font-size:17px;color:rgba(100,116,139,.5);margin-top:4px">App CORE \u2014 M\u00e9todo Leandro Martins</div>
+    </div>`
+}
+
+function buildPostConquistaHTMLStories(nome, meta) {
+  const cor = meta.pct >= 100 ? '#f59e0b' : '#22c55e'
+  const emoji = meta.pct >= 100 ? '\U0001f3c6' : '\u2b50'
+  const tit1 = meta.pct >= 100 ? 'META 100%' : `META ${meta.pct}%`
+  const tit2 = meta.pct >= 100 ? 'CONQUISTADA!' : 'CONCLU\u00cdDA!'
+  return `
+    <div style="position:absolute;inset:0;background:linear-gradient(160deg,#1c1200,#2d1f00,#0f172a,#0f172a);"></div>
+    <div style="position:absolute;top:0;left:0;right:0;bottom:0;opacity:.04;background:repeating-linear-gradient(45deg,#fff,#fff 1px,transparent 1px,transparent 40px)"></div>
+    <div style="position:absolute;inset:30px;border:2px solid ${cor}44;border-radius:24px;pointer-events:none"></div>
+    <div style="position:absolute;top:130px;left:0;right:0;text-align:center">
+      <span style="font-size:110px;font-weight:900;letter-spacing:18px;color:#f59e0b">CORE</span>
+      <div style="font-size:34px;letter-spacing:9px;color:rgba(251,191,36,.7);margin-top:8px;font-weight:600">M\u00c9TODO CORE</div>
+    </div>
+    <div style="position:absolute;top:440px;left:0;right:0;text-align:center">
+      <div style="font-size:150px;line-height:1">${emoji}</div>
+      <div style="font-size:72px;font-weight:900;color:${cor};letter-spacing:2px;margin-top:20px;line-height:1.15">${tit1}</div>
+      <div style="font-size:72px;font-weight:900;color:${cor};letter-spacing:2px;line-height:1.15">${tit2}</div>
+    </div>
+    <div style="position:absolute;top:920px;left:80px;right:80px;text-align:center">
+      <div style="font-size:44px;font-weight:700;color:#e2e8f0;margin-bottom:16px;line-height:1.2">${meta.nome}</div>
+      <div style="font-size:28px;color:rgba(148,163,184,.7);margin-bottom:30px">${meta.areaNome} \u203a ${meta.objNome}</div>
+      <div style="display:inline-block;background:${cor}22;border:2px solid ${cor};border-radius:24px;padding:20px 60px">
+        <span style="font-size:100px;font-weight:900;color:${cor};line-height:1">${meta.pct}%</span>
+        <div style="font-size:28px;color:${cor};font-weight:600">DE CONCLUS\u00c3O</div>
+      </div>
+    </div>
+    <div style="position:absolute;bottom:260px;left:80px;right:80px;text-align:center">
+      <div style="width:320px;height:1px;background:${cor}55;margin:0 auto 24px"></div>
+      <div style="font-size:38px;font-weight:700;color:#e2e8f0">${nome}</div>
+      <div style="font-size:28px;color:rgba(148,163,184,.6);margin-top:10px">alcan\u00e7ou mais um n\u00edvel de evolu\u00e7\u00e3o</div>
+    </div>
+    <div style="position:absolute;bottom:110px;left:0;right:0;text-align:center">
+      <div style="font-size:28px;color:rgba(148,163,184,.6)">\U0001f4f1 @coachleandromartins &nbsp;|&nbsp; \U0001f4fa @LEANDROMARTINSCOACH</div>
+      <div style="font-size:22px;color:rgba(100,116,139,.5);margin-top:6px">App CORE \u2014 M\u00e9todo Leandro Martins</div>
+    </div>`
+}
+
+async function baixarConquista() {
+  const btn = document.getElementById('btn-baixar-cq')
+  const isSt = _cqFormato === 'stories'
+  const w = 1080, h = isSt ? 1920 : 1080
+  btn.textContent = '\u23f3 Gerando...'
+  btn.disabled = true
+  try {
+    const el = document.getElementById('cq-render')
+    const canvas = await html2canvas(el, { width: w, height: h, scale: 1, backgroundColor: '#1c1200', useCORS: true, logging: false })
+    const a = document.createElement('a')
+    a.download = `conquista_${(_cqMeta?.nome||'meta').replace(/\s+/g,'_').slice(0,30)}_${isSt?'stories':'feed'}.png`
+    a.href = canvas.toDataURL('image/png')
+    a.click()
+    toast('Imagem baixada!')
+  } catch(e) { toast('Erro ao gerar imagem: ' + e.message, false) }
+  btn.textContent = '\u2b07\ufe0f Baixar PNG'
+  btn.disabled = false
 }
 
 // buildPostHTML: todos os valores em px nativos para 1080×1080
@@ -2499,6 +2670,9 @@ function renderAcompMetas(dNums, hoje) {
             <div class="pbar" style="width:80px"><div class="pfill" style="width:${pct}%"></div></div>
           </div>
         </div>
+        ${pct >= 80 ? `<div style="margin-bottom:8px">
+          <button class="btn btn-y" style="font-size:12px;padding:5px 12px" onclick="abrirConquistaPost('${m.id}')">📸 Compartilhar conquista</button>
+        </div>` : ''}
         <div style="display:flex;gap:4px;flex-wrap:wrap;padding-bottom:4px">
           ${dNums.map(d => {
             const data = `${S.ano}-${String(S.mes).padStart(2,'0')}-${String(d).padStart(2,'0')}`
