@@ -48,7 +48,7 @@
   .badge-r{background:#450a0a;color:#fca5a5}
   .pbar{background:#0f172a;border-radius:999px;height:8px;overflow:hidden;margin-top:6px}
   .pfill{height:100%;border-radius:999px;background:#6366f1;transition:width .4s}
-  .sidebar{width:220px;min-height:100vh;background:#0f172a;border-right:1px solid #1e293b;flex-shrink:0;display:flex;flex-direction:column}
+  .sidebar{width:220px;height:100vh;background:#0f172a;border-right:1px solid #1e293b;flex-shrink:0;display:flex;flex-direction:column;overflow-y:auto}
   .sitem{display:flex;align-items:center;gap:10px;padding:10px 16px;cursor:pointer;color:#94a3b8;border-radius:8px;margin:2px 8px;font-size:14px;font-weight:500;transition:all .2s}
   .sitem:hover,.sitem.active{background:#1e293b;color:#e2e8f0}
   .sitem.active{color:#a5b4fc}
@@ -92,7 +92,7 @@
   .badge-item.earned{border-color:#6366f1;color:#a5b4fc}
   .badge-item span:first-child{font-size:24px}
   @media(max-width:768px){
-    .sidebar{position:fixed;left:-220px;top:0;z-index:50;transition:left .3s}
+    .sidebar{position:fixed;left:-220px;top:0;height:100dvh;z-index:50;transition:left .3s;overflow-y:auto}
     .sidebar.open{left:0}
     #mob-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:49}
     #mob-overlay.show{display:block}
@@ -245,7 +245,7 @@
           <div class="xp-bar-wrap"><div class="xp-bar-fill" id="xp-fill" style="width:0%"></div></div>
         </div>
       </div>
-      <div style="flex:1;padding:8px 0">
+      <div style="flex:1;padding:8px 0;overflow-y:auto">
         <div class="sitem active" id="nav-dash" onclick="navTo('dash')">📊 Dashboard</div>
         <div class="sitem" id="nav-guia" onclick="navTo('guia')">📖 Guia CORE</div>
         <div class="sitem" id="nav-jornada"      onclick="navTo('jornada')">📚 Jornada do Leitor</div>
@@ -1042,11 +1042,13 @@ async function confirmarNovoAno() {
 
 async function doLogout() {
   if (!confirm('Deseja sair do Planejador de Conquistas?')) return
+  S.user = null
+  S.perfil = null
+  S.tela = 'login'
+  go('login')
   localStorage.removeItem('pc_remember')
   sessionStorage.removeItem('pc_session')
-  await db.auth.signOut()
-  S.user = null; S.perfil = null
-  go('login')
+  try { await db.auth.signOut() } catch(e) { console.warn('signOut:', e) }
 }
 
 async function afterLogin() {
@@ -4022,7 +4024,7 @@ function jSave(d) {
   }
 }
 
-async function jSyncFromCloud() {
+async async function jSyncFromCloud() {
   if (!S.user) return
   const { data, error } = await db.from('jornada').select('*').eq('user_id', S.user.id).single()
   if (error || !data) return
@@ -4261,7 +4263,8 @@ db.auth.onAuthStateChange(async (event, session) => {
   }
   if (event === 'SIGNED_OUT') {
     sessionStorage.removeItem('pc_session')
-    go('login')
+    S.user = null; S.perfil = null
+    if (S.tela !== 'login') go('login')
   }
 })
 </script>
