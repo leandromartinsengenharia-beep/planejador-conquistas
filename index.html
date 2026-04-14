@@ -4024,7 +4024,7 @@ function jSave(d) {
   }
 }
 
-async async function jSyncFromCloud() {
+aasync function jSyncFromCloud() {
   if (!S.user) return
   const { data, error } = await db.from('jornada').select('*').eq('user_id', S.user.id).single()
   if (error || !data) return
