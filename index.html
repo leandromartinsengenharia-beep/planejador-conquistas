@@ -461,6 +461,20 @@
   </div>
 </div>
 
+<!-- Modal Atividade Jornada -->
+<div id="modal-jativ" class="modal-bg" style="display:none">
+  <div class="modal" style="max-width:500px">
+    <h3 style="font-size:16px;font-weight:700;color:#a5b4fc;margin-bottom:12px">✏️ Registrar Atividade</h3>
+    <p id="modal-jativ-titulo" style="font-size:13px;color:#94a3b8;margin-bottom:14px"></p>
+    <textarea id="modal-jativ-resp" class="inp" style="min-height:120px;resize:vertical" placeholder="Escreva sua resposta aqui..."></textarea>
+    <input type="hidden" id="modal-jativ-capid"/>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-g" onclick="jSalvarAtividade()" style="flex:1;padding:11px">✅ Salvar</button>
+      <button class="btn btn-s" onclick="document.getElementById('modal-jativ').style.display='none'" style="padding:11px 16px">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal Compartilhar Conquista de Meta -->
 <div id="modal-conquista" class="modal-bg">
   <div class="modal" style="max-width:540px">
@@ -1168,6 +1182,7 @@ async function rdCons() {
 }
 
 function renderCons(el) {
+  if (!el) return
   const abas = [{id:'perfil',l:'👤 Perfil'},{id:'declaracao',l:'✍️ Declaração'},{id:'maas',l:'📊 MAAS'},{id:'masd',l:'🔍 MASD'},{id:'mapa',l:'🗺️ MAPA'}]
   el.innerHTML = `
     <div style="margin-bottom:20px">
@@ -3782,13 +3797,13 @@ let _ferrAtiva = null
 function _ferrCapLido(capId) {
   if (capId === 0) return true
   const j = (() => { try { return JSON.parse(localStorage.getItem('core_jornada_'+(S.user?.id||'guest'))||'{}') } catch { return {} } })()
-  return !!(j.caps && j.caps[capId + '_lido'])
+  return !!(j.caps && (j.caps[String(capId)]?.lido || j.caps[capId+'_lido']))
 }
 
 function rdFerramentas() {
   const el = document.getElementById('sub-ferramentas')
   const j = (() => { try { return JSON.parse(localStorage.getItem('core_jornada_'+(S.user?.id||'guest'))||'{}') } catch { return {} } })()
-  const capsLidos = j.caps ? Object.keys(j.caps).filter(k=>k.endsWith('_lido')).map(k=>parseInt(k)).filter(n=>!isNaN(n)) : []
+  const capsLidos = j.caps ? Object.entries(j.caps).filter(([k,v])=>v?.lido).map(([k])=>parseInt(k)).filter(n=>!isNaN(n)) : []
   const totalLidos = capsLidos.length
   const totalFerrs = FERRAMENTAS_CORE.length
   const desbloqueadas = FERRAMENTAS_CORE.filter(f => _ferrCapLido(f.cap)).length
@@ -4019,6 +4034,31 @@ function jMarcarAtividade(id) {
   if (d.caps[id].atividade) addXP(10)
 }
 
+function jAbrirAtividade(capId) {
+  const d = jLoad()
+  const cap = CAPS_CORE.find(c=>c.id===capId)
+  if (!cap) return
+  const salvo = d.caps[capId]?.atividadeResp || ''
+  document.getElementById('modal-jativ-titulo').textContent = cap.ativ || 'Registre sua atividade'
+  document.getElementById('modal-jativ-resp').value = salvo
+  document.getElementById('modal-jativ-capid').value = capId
+  document.getElementById('modal-jativ').style.display = 'flex'
+}
+
+function jSalvarAtividade() {
+  const capId = parseInt(document.getElementById('modal-jativ-capid').value)
+  const resp = document.getElementById('modal-jativ-resp').value.trim()
+  const d = jLoad()
+  if (!d.caps[capId]) d.caps[capId] = { lido: true, dataLido: new Date().toISOString().slice(0,10), atividade: false }
+  d.caps[capId].atividade = true
+  d.caps[capId].atividadeResp = resp
+  jSave(d)
+  document.getElementById('modal-jativ').style.display = 'none'
+  rdJornada()
+  addXP(10)
+  toast('\u2705 Atividade registrada! +10 XP')
+}
+
 async function jSolicitarNotificacao() {
   if (!('Notification' in window)) { toast('Seu navegador não suporta notificações', false); return }
   const perm = await Notification.requestPermission()
@@ -4136,9 +4176,10 @@ function rdJornada() {
                 <button class="btn ${lido?'btn-s':'btn-p'}" style="font-size:12px;padding:6px 14px" onclick="event.stopPropagation();jMarcarLido(${cap.id})">
                   ${lido ? '↩ Desmarcar leitura' : '📖 Marcar como lido'}
                 </button>
-                ${lido ? `<button class="btn btn-s" style="font-size:12px;padding:6px 14px;${ativ?'background:#14532d;border-color:#22c55e;color:#86efac':''}" onclick="event.stopPropagation();jMarcarAtividade(${cap.id})">
-                  ${ativ ? '✅ Atividade feita' : '✏️ Marcar atividade feita'}
+                ${lido ? `<button class="btn btn-s" style="font-size:12px;padding:6px 14px;${ativ?'background:#14532d;border-color:#22c55e;color:#86efac':''}" onclick="event.stopPropagation();jAbrirAtividade(${cap.id})">
+                  ${ativ ? '✅ Atividade feita' : '✏️ Registrar atividade'}
                 </button>` : ''}
+              ${d.caps[cap.id]?.atividadeResp ? `<div style="font-size:11px;color:#475569;margin-top:6px;font-style:italic">"${d.caps[cap.id].atividadeResp.slice(0,80)}${d.caps[cap.id].atividadeResp.length>80?'\u2026':''}"</div>` : ''}
               </div>
               ${c.dataLido ? `<div style="font-size:11px;color:#475569;margin-top:8px">Lido em ${c.dataLido}</div>` : ''}
             </div>
