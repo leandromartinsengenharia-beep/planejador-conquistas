@@ -249,7 +249,7 @@
         <div class="sitem active" id="nav-dash" onclick="navTo('dash')">📊 Dashboard</div>
         <div class="sitem" id="nav-guia" onclick="navTo('guia')">📖 Guia CORE</div>
         <div class="sitem" id="nav-jornada"      onclick="navTo('jornada')">📚 Jornada do Leitor</div>
-      <div class="sitem" id="nav-ferramentas"  onclick="navTo('ferramentas')">🛠️ Ferramentas CORE</div>
+        <div class="sitem" id="nav-ferramentas"  onclick="navTo('ferramentas')">🛠️ Ferramentas CORE</div>
         <div style="font-size:10px;color:#334155;font-weight:700;letter-spacing:2px;padding:8px 16px 2px;text-transform:uppercase">Método CORE</div>
         <div class="sitem" id="nav-cons" onclick="navTo('cons')">🧠 C · Consciência</div>
         <div class="sitem" id="nav-cad" onclick="navTo('cad')">🎯 O · Objetivos</div>
@@ -1309,10 +1309,10 @@ function renderConsGuia() {
       <br><br>Segundo o Processo Evolução, <strong>95% das pessoas vivem abaixo do seu potencial real</strong> porque nunca pararam para se avaliar de forma sistêmica.
       <br><br>A consciência plena responde: <em>"Onde estou agora?"</em> em todas as áreas da vida — e isso muda tudo.`,
       atividades:[
-        {t:'MAAS',d:'Mapa de Auto Avaliação Sistêmica — dê uma nota de 0 a 10 para cada um dos 12 pilares da vida. Seja brutalmente honesto.'},
-        {t:'MASD',d:'Mapa de Avaliação Sistêmica Direcionada — responda 5 perguntas por pilar (SIM/Mais ou Menos/NÃO). Score máximo: 10 por pilar.'},
-        {t:'MAPA',d:'Com base no MAAS e MASD, o app gera automaticamente seu diagnóstico: pontos fortes, áreas urgentes e média geral da vida.'},
-        {t:'Declaração',d:'Assine a Declaração "Despertando seu Potencial" — um compromisso público com você mesmo de que a mudança começa agora.'},
+        {t:'Ferramenta 6 — Painel da Realidade Atual (MAAS)',d:'Avalie de 0 a 10 cada um dos 12 pilares da vida. Seja brutalmente honesto — essa é sua fotografia real.',nav:'ferramentas'},
+        {t:'Ferramenta 7 — Diagnóstico de Profundidade (MASD)',d:'Responda 5 perguntas por pilar para identificar as causas reais dos seus desequilíbrios.',nav:'ferramentas'},
+        {t:'Mapa CORE — Diagnóstico Integrado',d:'Com base no MAAS e MASD, o app gera automaticamente: pontos fortes, áreas urgentes e média geral.', nav:'cons'},
+        {t:'Declaração de Identidade',d:'Assine a Declaração "Despertando seu Potencial" — um compromisso público com você mesmo.',nav:'cons'},
       ],
       pilares: ['Vida Amorosa','Filhos','Relacionamentos','Saúde Física','Saúde Emocional','Saúde Ambiental','Financeiro','Profissional','Intelectual','Hobbies e Lazer','Contribuição Social','Espiritual']
     },
@@ -1323,10 +1323,10 @@ function renderConsGuia() {
       📅 <strong>Mensal</strong> — recorrente, distribuído automaticamente pelo ano<br>
       📆 <strong>Anual</strong> — visão do ano, copiado para o próximo com um clique`,
       atividades:[
-        {t:'Áreas de Vida',d:'Crie suas áreas conectadas aos 12 pilares do MAAS. Cada área agrupa objetivos relacionados.'},
-        {t:'Objetivos',d:'Defina objetivos claros, com tipo, prioridade e prazo. O app organiza automaticamente por mês e ano.'},
-        {t:'Prioridade',d:'Classifique: Alta 🔴 / Média 🟡 / Baixa 🟢. Foque no que importa mais primeiro.'},
-        {t:'Virar Ano',d:'No final do ano, o app pergunta quais objetivos e metas recorrentes você quer copiar para o próximo ano.'},
+        {t:'Ferramenta 15 — Método SMART CORE',d:'Defina 1 objetivo Específico, Mensurável, Alcançável, Relevante e Temporal.',nav:'ferramentas'},
+        {t:'Ferramenta 16 — Mapa de Objetivos',d:'Visualize todos seus objetivos por pilar: curto (até 3 meses), médio (3-12 meses) e longo prazo (1-5 anos).',nav:'ferramentas'},
+        {t:'Ferramenta 17 — SOL (Sistema de Objetivos e Lacunas)',d:'Identifique a lacuna entre onde você está e onde quer chegar. Construa as pontes.',nav:'ferramentas'},
+        {t:'Cadastro no App',d:'Crie suas Áreas, Objetivos e Metas no app. O sistema organiza automaticamente por mês e ano.',nav:'cad'},
       ]
     },
     { letra:'R', cor:'#22c55e', nome:'Resultados', sub:'Ação diária que gera conquistas reais',
@@ -1337,10 +1337,10 @@ function renderConsGuia() {
       💰 <strong>Moeda</strong> — meta financeira em R$ (ex: R$ 100.000,00)
       <br><br>A <strong>consistência diária</strong> é o segredo. Pequenas ações repetidas criam resultados extraordinários.`,
       atividades:[
-        {t:'Check-in diário',d:'Registre ✅ ou ❌ para cada meta. Para metas de quantidade/moeda, informe o valor realizado.'},
-        {t:'Acompanhamento',d:'Visualize todo o mês de uma vez. Identifique dias fracos e reforce a consistência.'},
-        {t:'Gamificação',d:'Cada check-in vale +10 XP. Meta 100% no mês: +50 XP. Suba de nível e desbloqueie badges!'},
-        {t:'Streak',d:'Dias consecutivos de check-in geram bônus. 7 dias: +75 XP · 30 dias: +300 XP 🔥'},
+        {t:'Ferramenta 20 — Sistema de Metas Diárias',d:'Defina suas 3 tarefas mais importantes do dia (MIT) e execute com constância.',nav:'ferramentas'},
+        {t:'Ferramenta 22 — Painel de Constância',d:'Monitore visualmente o cumprimento dos seus compromissos diários.',nav:'ferramentas'},
+        {t:'Check-in Diário no App',d:'Registre ✅ ou ❌ para cada meta. Para metas de quantidade/moeda, informe o valor realizado.',nav:'acomp'},
+        {t:'Gamificação e Streak',d:'Cada check-in vale XP. 🌱→🌿→🌳→🔥 Suba de nível. Sequências geram bônus de 75 a 300 XP.',nav:'acomp'},
       ]
     },
     { letra:'E', cor:'#a855f7', nome:'Evolução', sub:'O ciclo que nunca para',
@@ -1351,10 +1351,10 @@ function renderConsGuia() {
       🏆 <strong>XP e Níveis</strong> — gamificação do crescimento<br>
       📈 <strong>MAAS histórico</strong> — sua vida melhorou? Compare os scores`,
       atividades:[
-        {t:'Dashboard',d:'Visão geral do mês: % de realização, progresso por área, check-ins do dia.'},
-        {t:'Relatórios',d:'Relatório mensal completo em PDF com todas as metas e resultados.'},
-        {t:'Compartilhar',d:'Gere imagens do seu progresso para Stories e Feed do Instagram — inspire outros!'},
-        {t:'Virar Ano',d:'Avalie o ano completo, copie o que funcionou e redefina o que precisa mudar.'},
+        {t:'Ferramenta 21 — Revisão Semanal',d:'Analise a semana: conquistas, aprendizados e o foco da próxima semana.',nav:'ferramentas'},
+        {t:'Ferramenta 33 — Revisão Mensal',d:'Análise mensal de resultados, lições e ajustes. O que celebrar? O que mudar?',nav:'ferramentas'},
+        {t:'Ferramenta 34 — Plano Anual CORE',d:'Planejamento anual: palavra do ano, 3 grandes metas, 3 hábitos e seu legado.',nav:'ferramentas'},
+        {t:'Ferramenta 40 — Plano de Evolução Contínua',d:'Framework permanente: próximo nível, compromisso e quem você precisa se tornar.',nav:'ferramentas'},
       ]
     },
   ]
@@ -1381,7 +1381,7 @@ function renderConsGuia() {
         <div style="font-size:12px;font-weight:700;color:${e.cor};text-transform:uppercase;letter-spacing:1px;margin-bottom:8px">Atividades desta etapa:</div>
         <div style="display:flex;flex-direction:column;gap:6px">
           ${e.atividades.map(a=>`
-          <div style="background:#0f172a;border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start">
+          <div style="background:#0f172a;border-radius:8px;padding:10px 12px;display:flex;gap:10px;align-items:flex-start;cursor:${a.nav?'pointer':'default'}" ${a.nav?`onclick="navTo('${a.nav}')"`:''}>
             <span style="color:${e.cor};font-size:16px;flex-shrink:0">›</span>
             <div><strong style="color:#e2e8f0;font-size:13px">${a.t}</strong><br><span style="font-size:12px;color:#64748b">${a.d}</span></div>
           </div>`).join('')}
@@ -3561,6 +3561,35 @@ function renderMaasDash() {
   const vals = MAAS_PILARES.map(p => ({ ...p, v: Number(maasData[p.id]||5) }))
   const media = (vals.reduce((s,p)=>s+p.v,0)/vals.length).toFixed(1)
   const baixos = vals.filter(p => p.v <= 5).sort((a,b)=>a.v-b.v).slice(0,3)
+  const n = vals.length
+  const cx = 160, cy = 160, r = 130
+  const spiderPolygon = vals.map((p,i) => {
+    const angle = (Math.PI * 2 * i / n) - Math.PI/2
+    const rv = (p.v/10) * r
+    return `${(cx + Math.cos(angle)*rv).toFixed(1)},${(cy + Math.sin(angle)*rv).toFixed(1)}`
+  }).join(' ')
+  const gridLines = [2,4,6,8,10].map(g => {
+    const pts = vals.map((_,i) => {
+      const angle = (Math.PI * 2 * i / n) - Math.PI/2
+      const rg = (g/10)*r
+      return `${(cx+Math.cos(angle)*rg).toFixed(1)},${(cy+Math.sin(angle)*rg).toFixed(1)}`
+    }).join(' ')
+    return `<polygon points="${pts}" fill="none" stroke="#334155" stroke-width="1"/>`
+  }).join('')
+  const axisLines = vals.map((_,i) => {
+    const angle = (Math.PI * 2 * i / n) - Math.PI/2
+    return `<line x1="${cx}" y1="${cy}" x2="${(cx+Math.cos(angle)*r).toFixed(1)}" y2="${(cy+Math.sin(angle)*r).toFixed(1)}" stroke="#334155" stroke-width="1"/>`
+  }).join('')
+  const labels = vals.map((p,i) => {
+    const angle = (Math.PI * 2 * i / n) - Math.PI/2
+    const lx = cx + Math.cos(angle)*(r+22)
+    const ly = cy + Math.sin(angle)*(r+22)
+    const cor = p.v >= 8 ? '#22c55e' : p.v >= 6 ? '#f59e0b' : '#ef4444'
+    const parts = p.lbl.split(' ')
+    const line1 = parts.slice(0, Math.ceil(parts.length/2)).join(' ')
+    const line2 = parts.slice(Math.ceil(parts.length/2)).join(' ')
+    return `<text x="${lx.toFixed(1)}" y="${ly.toFixed(1)}" text-anchor="middle" font-size="9" fill="${cor}" font-family="sans-serif"><tspan x="${lx.toFixed(1)}" dy="0">${line1}</tspan>${line2 ? `<tspan x="${lx.toFixed(1)}" dy="11">${line2}</tspan>` : ''}</text>`
+  }).join('')
 
   return `<div class="card" style="margin-bottom:16px">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;flex-wrap:wrap;gap:8px">
@@ -3570,21 +3599,34 @@ function renderMaasDash() {
       </div>
       <button class="btn btn-s" onclick="navTo('ferramentas')" style="font-size:12px;padding:6px 12px">Atualizar</button>
     </div>
-    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:8px;margin-bottom:14px">
-      ${vals.map(p => {
-        const cor = p.v >= 8 ? '#22c55e' : p.v >= 6 ? '#f59e0b' : '#ef4444'
-        return `<div style="background:#0f172a;border-radius:8px;padding:10px 12px">
-          <div style="font-size:11px;color:#64748b;margin-bottom:4px">${p.lbl}</div>
-          <div style="display:flex;align-items:center;gap:8px">
-            <div style="flex:1;height:6px;background:#1e293b;border-radius:6px;overflow:hidden">
-              <div style="width:${p.v*10}%;height:100%;background:${cor};border-radius:6px;transition:width .4s"></div>
+    <div style="display:flex;gap:16px;flex-wrap:wrap;align-items:flex-start">
+      <svg width="320" height="320" viewBox="0 0 320 320" style="flex-shrink:0;margin:0 auto">
+        ${gridLines}
+        ${axisLines}
+        <polygon points="${spiderPolygon}" fill="rgba(99,102,241,0.25)" stroke="#6366f1" stroke-width="2"/>
+        ${vals.map((p,i)=>{
+          const angle = (Math.PI*2*i/n)-Math.PI/2
+          const rv=(p.v/10)*r
+          const cor=p.v>=8?'#22c55e':p.v>=6?'#f59e0b':'#ef4444'
+          return `<circle cx="${(cx+Math.cos(angle)*rv).toFixed(1)}" cy="${(cy+Math.sin(angle)*rv).toFixed(1)}" r="4" fill="${cor}" stroke="#0f172a" stroke-width="1"/>`
+        }).join('')}
+        ${labels}
+        <text x="${cx}" y="${cy+4}" text-anchor="middle" font-size="14" font-weight="bold" fill="#f59e0b" font-family="sans-serif">${media}</text>
+      </svg>
+      <div style="flex:1;min-width:160px">
+        ${vals.map(p => {
+          const cor = p.v >= 8 ? '#22c55e' : p.v >= 6 ? '#f59e0b' : '#ef4444'
+          return `<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+            <div style="font-size:11px;color:#94a3b8;min-width:120px;flex:1">${p.lbl}</div>
+            <div style="width:60px;height:5px;background:#1e293b;border-radius:5px;overflow:hidden">
+              <div style="width:${p.v*10}%;height:100%;background:${cor};border-radius:5px"></div>
             </div>
-            <span style="font-size:14px;font-weight:800;color:${cor};min-width:20px">${p.v}</span>
-          </div>
-        </div>`
-      }).join('')}
+            <span style="font-size:12px;font-weight:800;color:${cor};min-width:16px">${p.v}</span>
+          </div>`
+        }).join('')}
+      </div>
     </div>
-    ${baixos.length > 0 ? `<div style="background:#1c0a0a;border:1px solid #7f1d1d;border-radius:8px;padding:10px 14px">
+    ${baixos.length > 0 ? `<div style="background:#1c0a0a;border:1px solid #7f1d1d;border-radius:8px;padding:10px 14px;margin-top:12px">
       <div style="font-size:11px;font-weight:700;color:#ef4444;margin-bottom:6px">⚠️ \u00c1reas que precisam de aten\u00e7\u00e3o</div>
       ${baixos.map(p=>`<div style="font-size:13px;color:#fca5a5;margin-bottom:2px">${p.lbl}: <strong>${p.v}/10</strong></div>`).join('')}
     </div>` : ''}
@@ -3779,7 +3821,7 @@ function rdFerramentas() {
         const cor = BLOCO_CORES[b]
         return `<div style="margin-bottom:24px">
           <div style="font-size:12px;font-weight:800;letter-spacing:2px;color:${cor};margin-bottom:10px;text-transform:uppercase;padding:5px 12px;background:${cor}18;border-radius:8px;display:inline-block">${BLOCO_LABELS[b]}</div>
-          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px">
             ${fs.map(f => {
               const desbloq = _ferrCapLido(f.cap)
               const salvo = desbloq ? _ferrLerSalvo(f.id) : null
@@ -3789,8 +3831,8 @@ function rdFerramentas() {
                 ${!desbloq ? '<div style="position:absolute;top:10px;right:10px;font-size:14px">🔒</div>' : ''}
                 <div style="font-size:26px;margin-bottom:6px">${f.emoji}</div>
                 <div style="font-size:10px;color:${desbloq?cor:'#475569'};font-weight:700;margin-bottom:3px">Ferramenta ${f.num}</div>
-                <div style="font-size:12px;font-weight:600;color:${desbloq?'#e2e8f0':'#475569'};line-height:1.3">${f.nome}</div>
-                <div style="font-size:10px;margin-top:6px;color:${preench?'#22c55e':desbloq?'#475569':'#334155'}">${preench?'✅ Preenchida':desbloq?'\u25cb Pendente':'🔒 '+capLabel}</div>
+                <div style="font-size:13px;font-weight:700;color:${desbloq?'#e2e8f0':'#475569'};line-height:1.35">${f.nome}</div>
+                <div style="font-size:11px;margin-top:6px;color:${preench?'#22c55e':desbloq?'#64748b':'#334155'}">${preench?'✅ Preenchida':desbloq?'○ Pendente':'🔒 '+capLabel}</div>
               </div>`
             }).join('')}
           </div>
