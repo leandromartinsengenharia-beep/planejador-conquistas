@@ -1156,13 +1156,14 @@ let _masdPilar = null
 
 async function rdCons() {
   const el = document.getElementById('sub-cons')
-  // Carrega histórico MAAS e MASD
-  const [rMaas, rMasd] = await Promise.all([
-    db.from('maas').select('*').eq('user_id', S.user.id).order('created_at', {ascending:false}).limit(1),
-    db.from('masd').select('*').eq('user_id', S.user.id).order('created_at', {ascending:false}).limit(1),
-  ])
-  if (rMaas.data?.length) _maasData = rMaas.data[0].dados || {}
-  if (rMasd.data?.length) _masdData = rMasd.data[0].dados || {}
+  try {
+    const [rMaas, rMasd] = await Promise.all([
+      db.from('maas').select('*').eq('user_id', S.user.id).order('created_at', {ascending:false}).limit(1),
+      db.from('masd').select('*').eq('user_id', S.user.id).order('created_at', {ascending:false}).limit(1),
+    ])
+    if (rMaas.data?.length) _maasData = rMaas.data[0].dados || {}
+    if (rMasd.data?.length) _masdData = rMasd.data[0].dados || {}
+  } catch(e) { console.error('rdCons load error:', e) }
   renderCons(el)
 }
 
@@ -3850,10 +3851,20 @@ function _ferrLerSalvo(fId) {
   try { return JSON.parse(localStorage.getItem(_ferrKey(fId)) || 'null') } catch { return null }
 }
 
-function abrirFerramenta(fId) {
+function jAbrirFerramenta(nome) {
+  navTo('ferramentas')
+  const lower = nome.toLowerCase()
+  const f = FERRAMENTAS_CORE.find(x => {
+    const fn = x.nome.toLowerCase()
+    return fn.includes(lower) || lower.includes(fn.split(' ').slice(0,3).join(' '))
+  })
+  if (f) setTimeout(() => abrirFerramenta(f.id, true), 150)
+}
+
+function abrirFerramenta(fId, force = false) {
   const f = FERRAMENTAS_CORE.find(x => x.id === fId)
   if (!f) return
-  if (!_ferrCapLido(f.cap)) { toast('Leia o Cap ' + f.cap + ' para desbloquear esta ferramenta.', false); return }
+  if (!force && !_ferrCapLido(f.cap)) { toast('Leia o Cap ' + f.cap + ' para desbloquear esta ferramenta.', false); return }
   _ferrAtiva = f
   const salvo = _ferrLerSalvo(fId) || {}
   const cor = BLOCO_CORES[f.bloco]
@@ -4119,7 +4130,7 @@ function rdJornada() {
               ${cap.ferrs.length ? `
                 <div style="font-size:11px;color:#64748b;margin-bottom:6px;font-weight:600">FERRAMENTAS DO APP</div>
                 <div class="jcap-ferr">
-                  ${cap.ferrs.map(f=>`<span class="jcap-tag" onclick="event.stopPropagation();navTo('${f.nav}')">🔧 ${f.n}</span>`).join('')}
+                  ${cap.ferrs.map(f=>`<span class="jcap-tag" onclick="event.stopPropagation();jAbrirFerramenta('${f.n}')">🔧 ${f.n}</span>`).join('')}
                 </div>` : ''}
               <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px">
                 <button class="btn ${lido?'btn-s':'btn-p'}" style="font-size:12px;padding:6px 14px" onclick="event.stopPropagation();jMarcarLido(${cap.id})">

@@ -15,13 +15,27 @@ DROP POLICY IF EXISTS "checkins_own"  ON public.checkins;
 -- ============================================================
 
 CREATE TABLE IF NOT EXISTS public.usuarios (
-  id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
-  nome       TEXT NOT NULL,
-  email      TEXT NOT NULL,
-  plano      TEXT DEFAULT 'trial',
-  criado_em  TIMESTAMPTZ DEFAULT NOW(),
-  created_at TIMESTAMPTZ DEFAULT NOW()
+  id                  UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  nome                TEXT NOT NULL,
+  email               TEXT NOT NULL,
+  plano               TEXT DEFAULT 'trial',
+  xp                  INTEGER DEFAULT 0,
+  instagram           TEXT,
+  profissao           TEXT,
+  nascimento          DATE,
+  declaracao_assinada BOOLEAN DEFAULT false,
+  declaracao_data     TIMESTAMPTZ,
+  criado_em           TIMESTAMPTZ DEFAULT NOW(),
+  created_at          TIMESTAMPTZ DEFAULT NOW()
 );
+
+-- Colunas adicionadas posteriormente (idempotente)
+ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS xp                  INTEGER DEFAULT 0;
+ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS instagram           TEXT;
+ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS profissao           TEXT;
+ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS nascimento          DATE;
+ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS declaracao_assinada BOOLEAN DEFAULT false;
+ALTER TABLE public.usuarios ADD COLUMN IF NOT EXISTS declaracao_data     TIMESTAMPTZ;
 
 CREATE TABLE IF NOT EXISTS public.areas (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -82,6 +96,36 @@ CREATE POLICY "areas_own"     ON public.areas     FOR ALL USING (auth.uid() = us
 CREATE POLICY "objetivos_own" ON public.objetivos FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "metas_own"     ON public.metas     FOR ALL USING (auth.uid() = user_id);
 CREATE POLICY "checkins_own"  ON public.checkins  FOR ALL USING (auth.uid() = user_id);
+
+-- ============================================================
+-- MAAS (Mapa de Auto Avaliação Sistêmica)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.maas (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  dados      JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.maas ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "maas_own" ON public.maas;
+CREATE POLICY "maas_own" ON public.maas FOR ALL USING (auth.uid() = user_id);
+
+-- ============================================================
+-- MASD (Mapa de Avaliação Sistêmica Direcionada)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS public.masd (
+  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id    UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  dados      JSONB DEFAULT '{}'::jsonb,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+ALTER TABLE public.masd ENABLE ROW LEVEL SECURITY;
+DROP POLICY IF EXISTS "masd_own" ON public.masd;
+CREATE POLICY "masd_own" ON public.masd FOR ALL USING (auth.uid() = user_id);
 
 -- ============================================================
 -- JORNADA DO LEITOR CORE
