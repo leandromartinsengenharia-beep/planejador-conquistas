@@ -2111,7 +2111,7 @@ function setMasdResp(pilarId, pergId, valor, btn) {
   })
 }
 
-async async function salvarMasd() {
+async function salvarMasd() {
   const { error } = await db.from('masd').upsert({ user_id: S.user.id, dados: _masdData, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
   if (error) { toast('Erro: ' + error.message, false); return }
   await addXP(XP_ACAO.masd, 'masd')
