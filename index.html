@@ -4227,7 +4227,7 @@ function rdJornada() {
                 ${lido ? `<button class="btn btn-s" style="font-size:12px;padding:6px 14px;${ativ?'background:#14532d;border-color:#22c55e;color:#86efac':''}" onclick="event.stopPropagation();jAbrirAtividade(${cap.id})">
                   ${ativ ? '✅ Atividade feita' : '✏️ Registrar atividade'}
                 </button>` : ''}
-              ${d.caps[cap.id]?.atividadeResp ? `<div style="font-size:11px;color:#475569;margin-top:6px;font-style:italic">"${d.caps[cap.id].atividadeResp.slice(0,80)}${d.caps[cap.id].atividadeResp.length>80?'\u2026':''}"</div>` : ''}
+              ${caps[cap.id]?.atividadeResp ? `<div style="font-size:11px;color:#475569;margin-top:6px;font-style:italic">"${caps[cap.id].atividadeResp.slice(0,80)}${caps[cap.id].atividadeResp.length>80?'\u2026':''}"</div>` : ''}
               </div>
               ${c.dataLido ? `<div style="font-size:11px;color:#475569;margin-top:8px">Lido em ${c.dataLido}</div>` : ''}
             </div>
