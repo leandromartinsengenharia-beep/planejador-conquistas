@@ -1178,6 +1178,7 @@ async function rdCons() {
       db.from('masd').select('*').eq('user_id', S.user.id).order('created_at', {ascending:false}).limit(1),
     ])
     if (rMaas.data?.length) _maasData = rMaas.data[0].dados || {}
+    else { try { const lf=JSON.parse(localStorage.getItem(`core_ferr_${S.user?.id||'guest'}_f06`)||'null'); if(lf) _maasData=lf } catch{} }
     if (rMasd.data?.length) _masdData = rMasd.data[0].dados || {}
   } catch(e) { console.error('rdCons load error:', e) }
   renderCons(el)
@@ -1990,11 +1991,37 @@ function renderConsMaas() {
         </div>`
       }).join('')}
       <button class="btn btn-p" onclick="salvarMaas()" style="width:100%;padding:12px;margin-top:8px">💾 Salvar Avaliação</button>
+      ${Object.keys(_maasData).length>=6 ? renderMaasSpiderInline() : ''}
     </div>`
 }
 
+function renderMaasSpiderInline() {
+  const ids = PILARES.map(p=>p.id)
+  const vals = PILARES.map(p=>({...p, v:Number(_maasData[p.id]||5)}))
+  const n = vals.length, cx=180, cy=180, r=140
+  const rings = [2,4,6,8,10]
+  const ringPolys = rings.map(rv=>vals.map((_,i)=>{const a=(Math.PI*2*i/n)-Math.PI/2;const rd=(rv/10)*r;return `${(cx+Math.cos(a)*rd).toFixed(1)},${(cy+Math.sin(a)*rd).toFixed(1)}`}).join(' ')).map(pts=>`<polygon points="${pts}" fill="none" stroke="#1e293b" stroke-width="1"/>`)
+  const axes = vals.map((_,i)=>{const a=(Math.PI*2*i/n)-Math.PI/2;return `<line x1="${cx}" y1="${cy}" x2="${(cx+Math.cos(a)*r).toFixed(1)}" y2="${(cy+Math.sin(a)*r).toFixed(1)}" stroke="#1e293b" stroke-width="1"/>`})
+  const dataPoints = vals.map((p,i)=>{const a=(Math.PI*2*i/n)-Math.PI/2;const rv=(p.v/10)*r;return `${(cx+Math.cos(a)*rv).toFixed(1)},${(cy+Math.sin(a)*rv).toFixed(1)}`}).join(' ')
+  const dots = vals.map((p,i)=>{const a=(Math.PI*2*i/n)-Math.PI/2;const rv=(p.v/10)*r;return `<circle cx="${(cx+Math.cos(a)*rv).toFixed(1)}" cy="${(cy+Math.sin(a)*rv).toFixed(1)}" r="4" fill="${p.cor}"/>`})
+  const labels = vals.map((p,i)=>{const a=(Math.PI*2*i/n)-Math.PI/2;const rl=r+26;const lx=(cx+Math.cos(a)*rl).toFixed(1);const ly=(cy+Math.sin(a)*rl).toFixed(1);const anchor=Math.cos(a)>0.1?'start':Math.cos(a)<-0.1?'end':'middle';const words=p.nome.split(' ');return `<text x="${lx}" y="${ly}" text-anchor="${anchor}" font-size="9" fill="${p.cor}" font-weight="700">${words[0]}</text>${words[1]?`<text x="${lx}" y="${Number(ly)+11}" text-anchor="${anchor}" font-size="9" fill="${p.cor}">${words.slice(1).join(' ')}</text>`:''}`})
+  const media = (vals.reduce((s,p)=>s+p.v,0)/n).toFixed(1)
+  return `<div class="card" style="margin-top:16px;text-align:center;border-color:#6366f144">
+    <h4 style="font-weight:700;margin-bottom:12px;color:#a5b4fc">🕸️ Teia da Vida</h4>
+    <div style="overflow-x:auto">
+      <svg width="360" height="360" viewBox="0 0 360 360" style="max-width:100%">
+        ${ringPolys.join('')}${axes.join('')}
+        <polygon points="${dataPoints}" fill="#6366f133" stroke="#6366f1" stroke-width="2"/>
+        ${dots.join('')}${labels.join('')}
+        <text x="${cx}" y="${cy+5}" text-anchor="middle" font-size="16" font-weight="800" fill="#a5b4fc">${media}</text>
+      </svg>
+    </div>
+    <div style="font-size:12px;color:#64748b;margin-top:4px">Média geral: <strong style="color:#a5b4fc">${media}/10</strong> — salve para atualizar</div>
+  </div>`
+}
+
 async function salvarMaas() {
-  const { error } = await db.from('maas').insert({ user_id: S.user.id, dados: _maasData })
+  const { error } = await db.from('maas').upsert({ user_id: S.user.id, dados: _maasData, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
   if (error) { toast('Erro: ' + error.message, false); return }
   await addXP(15, 'maas')
   toast('✅ MAAS salvo! Veja seu MAPA atualizado.')
@@ -2084,8 +2111,8 @@ function setMasdResp(pilarId, pergId, valor, btn) {
   })
 }
 
-async function salvarMasd() {
-  const { error } = await db.from('masd').insert({ user_id: S.user.id, dados: _masdData })
+async async function salvarMasd() {
+  const { error } = await db.from('masd').upsert({ user_id: S.user.id, dados: _masdData, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
   if (error) { toast('Erro: ' + error.message, false); return }
   await addXP(XP_ACAO.masd, 'masd')
   await ganharBadge('mapeado')
