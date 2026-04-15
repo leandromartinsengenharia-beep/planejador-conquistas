@@ -1080,12 +1080,17 @@ async function afterLogin() {
   } else tb.style.display = 'none'
   await loadAll()
   await jSyncFromCloud()
+  await ferrSyncFromCloud()
   navTo('dash')
   setTimeout(jVerificarLembrete, 2000)
-  // Ping a cada 10 min para manter projeto Supabase ativo
+  // Ping a cada 5 min para manter projeto Supabase ativo
   setInterval(() => {
     if (S.user) db.from('usuarios').select('id').eq('id', S.user.id).limit(1).then(() => {})
-  }, 10 * 60 * 1000)
+  }, 5 * 60 * 1000)
+  // Keepalive a cada 6h: atualiza last_seen para evitar pause do projeto
+  setInterval(() => {
+    if (S.user) db.from('usuarios').upsert({ id: S.user.id, last_seen: new Date().toISOString() }, { onConflict: 'id' }).then(() => {})
+  }, 6 * 60 * 60 * 1000)
 }
 
 // ============================================================
@@ -3990,7 +3995,36 @@ function rdFerramentas() {
   `
 }
 
+let _ferrCache = {}  // cache em memória das ferramentas vindas do cloud
+
 function _ferrKey(fId) { return `core_ferr_${S.user?.id||'guest'}_${fId}` }
+
+async function ferrSyncFromCloud() {
+  if (!S.user) return
+  try {
+    const { data } = await db.from('ferramentas').select('dados').eq('user_id', S.user.id).single()
+    if (data?.dados) {
+      _ferrCache = data.dados
+      // Espelha no localStorage para acesso offline
+      Object.entries(_ferrCache).forEach(([fId, dadosFerr]) => {
+        localStorage.setItem(_ferrKey(fId), JSON.stringify(dadosFerr))
+      })
+      console.log('ferrSyncFromCloud: ' + Object.keys(_ferrCache).length + ' ferramentas carregadas')
+    }
+  } catch(e) { console.warn('ferrSyncFromCloud error:', e) }
+}
+
+function ferrSyncToCloud(fId, dados) {
+  if (!S.user) return
+  _ferrCache[fId] = dados
+  db.from('ferramentas').upsert({
+    user_id: S.user.id,
+    dados: _ferrCache,
+    updated_at: new Date().toISOString()
+  }, { onConflict: 'user_id' }).then(({ error }) => {
+    if (error) console.warn('ferr sync error:', error.message)
+  })
+}
 function _ferrLerSalvo(fId) {
   try { return JSON.parse(localStorage.getItem(_ferrKey(fId)) || 'null') } catch { return null }
 }
@@ -4073,6 +4107,7 @@ function salvarFerramenta() {
     }
   })
   localStorage.setItem(_ferrKey(_ferrAtiva.id), JSON.stringify(dados))
+  ferrSyncToCloud(_ferrAtiva.id, dados)
   toast('✅ Ferramenta salva!')
   rdFerramentas()
 }
