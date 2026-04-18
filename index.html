@@ -259,6 +259,7 @@
       </div>
       <div style="padding:12px 8px;border-top:1px solid #1e293b">
         <div class="sitem" onclick="abrirNovoAno()" style="color:#fbbf24">📆 Virar Ano</div>
+        <div class="sitem" onclick="sincronizarDispositivoManual()" style="color:#6366f1;font-size:13px">🔄 Sincronizar dispositivo</div>
         <div class="sitem" onclick="doLogout()" style="color:#ef4444">🚪 Sair</div>
       </div>
     </nav>
@@ -4087,11 +4088,11 @@ async function ferrSyncFromCloud() {
           updated_at: new Date().toISOString()
         }, { onConflict: 'user_id' }).then(({ error }) => {
           if (error) console.warn('ferr migrate error:', error.message)
-          else console.log('ferrSyncFromCloud: migradas ' + Object.keys(migrado).length + ' ferr do localStorage')
+          else { toast('✅ ' + Object.keys(migrado).length + ' ferramentas restauradas do dispositivo!') }
         })
       }
     }
-  } catch(e) { console.warn('ferrSyncFromCloud error:', e) }
+  } catch(e) { console.error('ferrSyncFromCloud error:', e); toast('⚠️ Erro ao sincronizar: ' + e.message, false) }
 }
 
 function ferrSyncToCloud(fId, dados) {
