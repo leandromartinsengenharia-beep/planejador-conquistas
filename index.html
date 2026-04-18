@@ -1055,6 +1055,7 @@ async function doLogout() {
 async function afterLogin() {
   if (S.tela === 'app') return  // evita chamada dupla (doLogin + onAuthStateChange)
   go('app')  // muda tela antes do primeiro await para travar chamada dupla
+  try {
   // load perfil
   const { data } = await db.from('usuarios').select('*').eq('id', S.user.id).single()
   S.perfil = data
@@ -1081,8 +1082,9 @@ async function afterLogin() {
   } else tb.style.display = 'none'
   await loadAll()
   await jSyncFromCloud()
-  await ferrSyncFromCloud()
+  ferrSyncFromCloud()  // fire-and-forget: nao bloqueia login
   navTo('dash')
+  } catch(authErr) { console.error('auth handler error:', authErr); navTo('dash') }
   setTimeout(jVerificarLembrete, 2000)
   // Ping a cada 5 min para manter projeto Supabase ativo
   setInterval(() => {
@@ -1250,16 +1252,19 @@ let _masdPilar = null
 
 async function rdCons() {
   const el = document.getElementById('sub-cons')
+  if (!el) return
+  renderCons(el)  // renderiza imediatamente com dados do cache/localStorage
   try {
     const [rMaas, rMasd] = await Promise.all([
       db.from('maas').select('*').eq('user_id', S.user.id).order('created_at', {ascending:false}).limit(1),
       db.from('masd').select('*').eq('user_id', S.user.id).order('created_at', {ascending:false}).limit(1),
     ])
-    if (rMaas.data?.length) _maasData = rMaas.data[0].dados || {}
-    else { try { const lf=JSON.parse(localStorage.getItem(`core_ferr_${S.user?.id||'guest'}_f06`)||'null'); if(lf) _maasData=lf } catch{} }
-    if (rMasd.data?.length) _masdData = rMasd.data[0].dados || {}
+    let atualizado = false
+    if (rMaas.data?.length) { _maasData = rMaas.data[0].dados || {}; atualizado = true }
+    else { try { const lf=JSON.parse(localStorage.getItem(`core_ferr_${S.user?.id||'guest'}_f06`)||'null'); if(lf) { _maasData=lf; atualizado=true } } catch{} }
+    if (rMasd.data?.length) { _masdData = rMasd.data[0].dados || {}; atualizado = true }
+    if (atualizado) renderCons(el)  // atualiza com dados reais do servidor
   } catch(e) { console.error('rdCons load error:', e) }
-  renderCons(el)
 }
 
 function renderCons(el) {
@@ -4092,7 +4097,7 @@ async function ferrSyncFromCloud() {
         })
       }
     }
-  } catch(e) { console.error('ferrSyncFromCloud error:', e); toast('⚠️ Erro ao sincronizar: ' + e.message, false) }
+  } catch(e) { console.error('ferrSyncFromCloud error:', e) }
 }
 
 function ferrSyncToCloud(fId, dados) {
