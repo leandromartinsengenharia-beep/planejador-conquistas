@@ -4003,13 +4003,36 @@ async function ferrSyncFromCloud() {
   if (!S.user) return
   try {
     const { data } = await db.from('ferramentas').select('dados').eq('user_id', S.user.id).single()
-    if (data?.dados) {
+    if (data?.dados && Object.keys(data.dados).length > 0) {
+      // Cloud tem dados: usa o cloud como fonte da verdade
       _ferrCache = data.dados
-      // Espelha no localStorage para acesso offline
       Object.entries(_ferrCache).forEach(([fId, dadosFerr]) => {
         localStorage.setItem(_ferrKey(fId), JSON.stringify(dadosFerr))
       })
-      console.log('ferrSyncFromCloud: ' + Object.keys(_ferrCache).length + ' ferramentas carregadas')
+      console.log('ferrSyncFromCloud: ' + Object.keys(_ferrCache).length + ' ferr do cloud')
+    } else {
+      // Cloud vazio: migra tudo do localStorage para o cloud (primeira vez)
+      const migrado = {}
+      FERRAMENTAS_CORE.forEach(f => {
+        try {
+          const raw = localStorage.getItem(_ferrKey(f.id))
+          if (raw) {
+            const parsed = JSON.parse(raw)
+            if (parsed && Object.keys(parsed).length > 0) migrado[f.id] = parsed
+          }
+        } catch {}
+      })
+      if (Object.keys(migrado).length > 0) {
+        _ferrCache = migrado
+        db.from('ferramentas').upsert({
+          user_id: S.user.id,
+          dados: _ferrCache,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'user_id' }).then(({ error }) => {
+          if (error) console.warn('ferr migrate error:', error.message)
+          else console.log('ferrSyncFromCloud: migradas ' + Object.keys(migrado).length + ' ferr do localStorage')
+        })
+      }
     }
   } catch(e) { console.warn('ferrSyncFromCloud error:', e) }
 }
