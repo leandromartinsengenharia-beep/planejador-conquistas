@@ -1356,8 +1356,64 @@ function renderConsPerfil() {
           <input id="pf-prof" class="inp" value="${p.profissao||''}" placeholder="Ex: Corretor de Imóveis, Coach"/>
         </div>
         <button class="btn btn-p" onclick="salvarPerfil()" style="width:100%;padding:12px;font-size:15px">💾 Salvar Perfil</button>
+        <div style="margin-top:20px;padding-top:20px;border-top:1px solid #1e293b">
+          <div style="font-size:13px;color:#94a3b8;margin-bottom:10px">📱 <strong>Sincronização entre dispositivos</strong></div>
+          <div style="font-size:12px;color:#64748b;margin-bottom:12px">Se você preencheu ferramentas ou deu checks neste dispositivo e eles não apareceram em outro, clique abaixo para enviar os dados para a nuvem.</div>
+          <button class="btn" onclick="sincronizarDispositivoManual()" style="width:100%;padding:10px;font-size:13px;background:#0f172a;border:1px solid #334155">🔄 Sincronizar dados deste dispositivo</button>
+        </div>
       </div>
     </div>`
+}
+
+async function sincronizarDispositivoManual() {
+  if (!S.user) { toast('Faça login primeiro', false); return }
+  toast('🔄 Sincronizando...', true, 3000)
+  let count = 0
+
+  // 1. Ferramentas: le localStorage e faz upsert de tudo no Supabase
+  const migrado = {}
+  FERRAMENTAS_CORE.forEach(f => {
+    try {
+      const raw = localStorage.getItem(_ferrKey(f.id))
+      if (raw) {
+        const parsed = JSON.parse(raw)
+        if (parsed && Object.keys(parsed).length > 0) { migrado[f.id] = parsed; count++ }
+      }
+    } catch {}
+  })
+  if (Object.keys(migrado).length > 0) {
+    // Mescla com o que ja esta no cloud para nao perder dados do outro dispositivo
+    try {
+      const { data } = await db.from('ferramentas').select('dados').eq('user_id', S.user.id).single()
+      const cloudDados = data?.dados || {}
+      const merged = { ...migrado, ...cloudDados } // cloud tem prioridade
+      _ferrCache = merged
+      await db.from('ferramentas').upsert({ user_id: S.user.id, dados: merged, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+    } catch {
+      await db.from('ferramentas').upsert({ user_id: S.user.id, dados: migrado, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+    }
+  }
+
+  // 2. Jornada (caps/checks): le localStorage e faz upsert
+  try {
+    const jLocal = jLoad()
+    if (jLocal.caps && Object.keys(jLocal.caps).length > 0) {
+      const { data: jCloud } = await db.from('jornada').select('caps').eq('user_id', S.user.id).single()
+      const cloudCaps = jCloud?.caps || {}
+      // Mescla: une os dois (nao perde nenhum check)
+      const mergedCaps = { ...cloudCaps, ...jLocal.caps }
+      await db.from('jornada').upsert({
+        user_id: S.user.id,
+        caps: mergedCaps,
+        notif: !!jLocal.notif,
+        updated_at: new Date().toISOString()
+      }, { onConflict: 'user_id' })
+      count += Object.keys(jLocal.caps).length
+    }
+  } catch(e) { console.warn('jornada sync manual error:', e) }
+
+  if (count > 0) toast('✅ ' + count + ' itens sincronizados com sucesso!')
+  else toast('ℹ️ Nenhum dado novo encontrado neste dispositivo')
 }
 
 async function salvarPerfil() {
