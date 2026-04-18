@@ -1067,7 +1067,7 @@ async function afterLogin() {
     vBar = document.createElement('div')
     vBar.id = 'verse-footer'
     vBar.className = 'verse-bar'
-    document.querySelector('#tela-app main').appendChild(vBar)
+    document.getElementById('tela-app').appendChild(vBar)
   }
   vBar.innerHTML = `<span style="color:#f59e0b;font-size:16px;vertical-align:middle">❝</span> <em style="color:#e2e8f0">${v.v}</em> <span style="color:#f59e0b;font-size:16px;vertical-align:middle">❞</span> &nbsp;<span style="color:#6366f1;font-weight:600;font-size:12px">${v.r}</span>`
   // show trial bar
@@ -2706,6 +2706,7 @@ function rdD() {
       <div style="font-size:13px;color:#818cf8;font-weight:600;margin-bottom:4px">${getSaudacao()}, ${nomeUser}! ${nivel.emoji}</div>
       <div style="font-size:16px;color:#e2e8f0;font-style:italic;line-height:1.5;margin-bottom:8px">"${frase.f}"</div>
       <div style="font-size:12px;color:#64748b;text-align:right">— ${frase.a}</div>
+      <div style="margin-top:10px;padding-top:10px;border-top:1px solid #1e293b;font-size:13px;color:#cbd5e1;font-style:italic">❝ ${versiculo.v} ❞ <span style="color:#6366f1;font-size:11px;font-weight:600">${versiculo.r}</span></div>
     </div>
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
       <h2 style="font-size:20px;font-weight:800">📊 Dashboard</h2>
