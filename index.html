@@ -712,6 +712,9 @@ async function addXP(qtd, motivo='') {
   const nivelAntes = getNivel(xpAtual)
   const novoXp = xpAtual + qtd
   const nivelDepois = getNivel(novoXp)
+  // Atualiza local imediatamente (independente do Supabase)
+  S.perfil = { ...(S.perfil||{}), xp: novoXp }
+  localStorage.setItem('core_perfil_' + S.user.id, JSON.stringify(S.perfil))
   await db.from('usuarios').update({ xp: novoXp }).eq('id', S.user.id)
   S.perfil = { ...perfil, xp: novoXp }
   atualizarXPSidebar()
@@ -726,8 +729,10 @@ async function ganharBadge(id) {
   const badges = S.perfil.badges || []
   if (badges.includes(id)) return
   const novos = [...badges, id]
-  await db.from('usuarios').update({ badges: novos }).eq('id', S.user.id)
+  // Atualiza local imediatamente
   S.perfil = { ...S.perfil, badges: novos }
+  localStorage.setItem('core_perfil_' + S.user.id, JSON.stringify(S.perfil))
+  await db.from('usuarios').update({ badges: novos }).eq('id', S.user.id)
   const def = BADGES_DEF.find(b => b.id === id)
   if (def) toast(`${def.emoji} Conquista desbloqueada: ${def.nome}!`)
 }
