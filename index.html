@@ -1376,28 +1376,29 @@ async function sincronizarDispositivoManual() {
   toast('🔄 Sincronizando...', true, 3000)
   let count = 0
 
-  // 1. Ferramentas: le localStorage e faz upsert de tudo no Supabase
+  // 1. Ferramentas: le localStorage e faz update na tabela usuarios
   const migrado = {}
   FERRAMENTAS_CORE.forEach(f => {
     try {
       const raw = localStorage.getItem(_ferrKey(f.id))
-      if (raw) {
-        const parsed = JSON.parse(raw)
-        if (parsed && Object.keys(parsed).length > 0) { migrado[f.id] = parsed; count++ }
-      }
+      if (raw) { const p = JSON.parse(raw); if (p && Object.keys(p).length > 0) { migrado[f.id] = p; count++ } }
     } catch {}
   })
-  if (Object.keys(migrado).length > 0) {
-    // Mescla com o que ja esta no cloud para nao perder dados do outro dispositivo
-    try {
-      const { data } = await db.from('ferramentas').select('dados').eq('user_id', S.user.id).single()
-      const cloudDados = data?.dados || {}
-      const merged = { ...migrado, ...cloudDados } // cloud tem prioridade
-      _ferrCache = merged
-      await db.from('ferramentas').upsert({ user_id: S.user.id, dados: merged, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
-    } catch {
-      await db.from('ferramentas').upsert({ user_id: S.user.id, dados: migrado, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
+  // Tambem tenta chaves com prefixo 'guest' (dados salvos sem login)
+  FERRAMENTAS_CORE.forEach(f => {
+    if (!migrado[f.id]) {
+      try {
+        const raw = localStorage.getItem('core_ferr_guest_' + f.id)
+        if (raw) { const p = JSON.parse(raw); if (p && Object.keys(p).length > 0) { migrado[f.id] = p; count++ } }
+      } catch {}
     }
+  })
+  if (Object.keys(migrado).length > 0) {
+    const { data: ud } = await db.from('usuarios').select('ferr_dados').eq('id', S.user.id).single()
+    const cloudDados = ud?.ferr_dados || {}
+    const merged = { ...migrado, ...cloudDados }
+    _ferrCache = merged
+    await db.from('usuarios').update({ ferr_dados: merged }).eq('id', S.user.id)
   }
 
   // 2. Jornada (caps/checks): le localStorage e faz upsert
@@ -4065,36 +4066,30 @@ function _ferrKey(fId) { return `core_ferr_${S.user?.id||'guest'}_${fId}` }
 async function ferrSyncFromCloud() {
   if (!S.user) return
   try {
-    const { data } = await db.from('ferramentas').select('dados').eq('user_id', S.user.id).single()
-    if (data?.dados && Object.keys(data.dados).length > 0) {
-      // Cloud tem dados: usa o cloud como fonte da verdade
-      _ferrCache = data.dados
-      Object.entries(_ferrCache).forEach(([fId, dadosFerr]) => {
-        localStorage.setItem(_ferrKey(fId), JSON.stringify(dadosFerr))
+    // Usa coluna ferr_dados na tabela usuarios (sem tabela separada)
+    const { data, error } = await db.from('usuarios').select('ferr_dados').eq('id', S.user.id).single()
+    if (error) { console.warn('ferrSyncFromCloud select error:', error.message); return }
+    const cloudDados = data?.ferr_dados
+    if (cloudDados && Object.keys(cloudDados).length > 0) {
+      _ferrCache = cloudDados
+      Object.entries(_ferrCache).forEach(([fId, d]) => {
+        localStorage.setItem(_ferrKey(fId), JSON.stringify(d))
       })
       console.log('ferrSyncFromCloud: ' + Object.keys(_ferrCache).length + ' ferr do cloud')
     } else {
-      // Cloud vazio: migra tudo do localStorage para o cloud (primeira vez)
+      // Cloud vazio: sobe dados do localStorage (primeira vez / migração)
       const migrado = {}
       FERRAMENTAS_CORE.forEach(f => {
         try {
           const raw = localStorage.getItem(_ferrKey(f.id))
-          if (raw) {
-            const parsed = JSON.parse(raw)
-            if (parsed && Object.keys(parsed).length > 0) migrado[f.id] = parsed
-          }
+          if (raw) { const p = JSON.parse(raw); if (p && Object.keys(p).length > 0) migrado[f.id] = p }
         } catch {}
       })
       if (Object.keys(migrado).length > 0) {
         _ferrCache = migrado
-        db.from('ferramentas').upsert({
-          user_id: S.user.id,
-          dados: _ferrCache,
-          updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' }).then(({ error }) => {
-          if (error) console.warn('ferr migrate error:', error.message)
-          else { toast('✅ ' + Object.keys(migrado).length + ' ferramentas restauradas do dispositivo!') }
-        })
+        const { error: ue } = await db.from('usuarios').update({ ferr_dados: _ferrCache }).eq('id', S.user.id)
+        if (ue) console.warn('ferr migrate error:', ue.message)
+        else toast('✅ ' + Object.keys(migrado).length + ' ferramentas restauradas!')
       }
     }
   } catch(e) { console.error('ferrSyncFromCloud error:', e) }
@@ -4103,11 +4098,7 @@ async function ferrSyncFromCloud() {
 function ferrSyncToCloud(fId, dados) {
   if (!S.user) return
   _ferrCache[fId] = dados
-  db.from('ferramentas').upsert({
-    user_id: S.user.id,
-    dados: _ferrCache,
-    updated_at: new Date().toISOString()
-  }, { onConflict: 'user_id' }).then(({ error }) => {
+  db.from('usuarios').update({ ferr_dados: _ferrCache }).eq('id', S.user.id).then(({ error }) => {
     if (error) console.warn('ferr sync error:', error.message)
   })
 }
