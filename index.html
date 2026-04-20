@@ -715,8 +715,9 @@ async function addXP(qtd, motivo='') {
   // Atualiza local imediatamente (independente do Supabase)
   S.perfil = { ...(S.perfil||{}), xp: novoXp }
   localStorage.setItem('core_perfil_' + S.user.id, JSON.stringify(S.perfil))
-  await db.from('usuarios').update({ xp: novoXp }).eq('id', S.user.id)
-  S.perfil = { ...perfil, xp: novoXp }
+  db.from('usuarios').update({ xp: novoXp }).eq('id', S.user.id).then(({error}) => {
+    if (error) console.warn('xp sync:', error.message)
+  })
   atualizarXPSidebar()
   if (nivelAntes.nome !== nivelDepois.nome) {
     await ganharBadge('evoluido')
@@ -729,10 +730,11 @@ async function ganharBadge(id) {
   const badges = S.perfil.badges || []
   if (badges.includes(id)) return
   const novos = [...badges, id]
-  // Atualiza local imediatamente
   S.perfil = { ...S.perfil, badges: novos }
   localStorage.setItem('core_perfil_' + S.user.id, JSON.stringify(S.perfil))
-  await db.from('usuarios').update({ badges: novos }).eq('id', S.user.id)
+  db.from('usuarios').update({ badges: novos }).eq('id', S.user.id).then(({error}) => {
+    if (error) console.warn('badge sync:', error.message)
+  })
   const def = BADGES_DEF.find(b => b.id === id)
   if (def) toast(`${def.emoji} Conquista desbloqueada: ${def.nome}!`)
 }
@@ -1288,8 +1290,9 @@ async function rdCons() {
     }
     let atualizado = false
     if (rMaas.data?.length) { _maasData = rMaas.data[0].dados || {}; atualizado = true }
-    else { try { const lf=JSON.parse(localStorage.getItem(`core_ferr_${S.user?.id||'guest'}_f06`)||'null'); if(lf) { _maasData=lf; atualizado=true } } catch{} }
+    else { try { const lf=JSON.parse(localStorage.getItem('core_maas_' + S.user.id)||'null'); if(lf) { _maasData=lf; atualizado=true } } catch{} }
     if (rMasd.data?.length) { _masdData = rMasd.data[0].dados || {}; atualizado = true }
+    else { try { const lf2=JSON.parse(localStorage.getItem('core_masd_' + S.user.id)||'null'); if(lf2) { _masdData=lf2; atualizado=true } } catch{} }
     if (atualizado || rPerfil.data) renderCons(el)  // re-renderiza com dados frescos
   } catch(e) { console.error('rdCons load error:', e) }
 }
@@ -2143,19 +2146,23 @@ async function baixarImagemPost() {
 }
 
 async function assinarDeclaracao() {
-  const now = new Date().toISOString()
-  // Salva localmente imediatamente
-  S.perfil = { ...(S.perfil||{}), declaracao_assinada: true, declaracao_data: now }
-  localStorage.setItem('core_perfil_' + S.user.id, JSON.stringify(S.perfil))
-  // Supabase em background
-  db.from('usuarios').update({ declaracao_assinada: true, declaracao_data: now }).eq('id', S.user.id).then(({ error }) => {
-    if (error) console.warn('declaracao supabase sync:', error.message)
-  })
-  await addXP(XP_ACAO.declaracao, 'declaracao')
-  await ganharBadge('declarado')
-  dispararFogos(3000)
-  toast('✍️ Declaração assinada! +30 XP!')
-  renderCons(document.getElementById('sub-cons'))
+  try {
+    if (!S.user) { toast('Faça login primeiro', false); return }
+    const now = new Date().toISOString()
+    S.perfil = { ...(S.perfil||{}), declaracao_assinada: true, declaracao_data: now }
+    localStorage.setItem('core_perfil_' + S.user.id, JSON.stringify(S.perfil))
+    db.from('usuarios').update({ declaracao_assinada: true, declaracao_data: now }).eq('id', S.user.id).then(({ error }) => {
+      if (error) console.warn('declaracao supabase sync:', error.message)
+    })
+    try { await addXP(XP_ACAO.declaracao || 30, 'declaracao') } catch(e) { console.warn('addXP err:', e) }
+    try { await ganharBadge('declarado') } catch(e) { console.warn('badge err:', e) }
+    dispararFogos(3000)
+    toast('✍️ Declaração assinada! +30 XP!')
+    renderCons(document.getElementById('sub-cons'))
+  } catch(e) {
+    console.error('assinarDeclaracao error:', e)
+    toast('Erro ao assinar: ' + e.message, false)
+  }
 }
 
 function renderConsMaas() {
@@ -2214,12 +2221,16 @@ function renderMaasSpiderInline() {
 }
 
 async function salvarMaas() {
+  // Backup local sempre
+  localStorage.setItem('core_maas_' + S.user.id, JSON.stringify(_maasData))
   const { error } = await db.from('maas').upsert({ user_id: S.user.id, dados: _maasData, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
-  if (error) { toast('Erro: ' + error.message, false); return }
+  if (error) { toast('⚠️ MAAS salvo localmente. Erro Supabase: ' + error.message, false) }
+  else {
   await addXP(15, 'maas')
   toast('✅ MAAS salvo! Veja seu MAPA atualizado.')
   _consAba = 'mapa'
   renderCons(document.getElementById('sub-cons'))
+  }
 }
 
 function renderConsMasd() {
@@ -2305,13 +2316,16 @@ function setMasdResp(pilarId, pergId, valor, btn) {
 }
 
 async function salvarMasd() {
+  localStorage.setItem('core_masd_' + S.user.id, JSON.stringify(_masdData))
   const { error } = await db.from('masd').upsert({ user_id: S.user.id, dados: _masdData, updated_at: new Date().toISOString() }, { onConflict: 'user_id' })
-  if (error) { toast('Erro: ' + error.message, false); return }
+  if (error) { toast('⚠️ MASD salvo localmente. Erro: ' + error.message, false) }
+  else {
   await addXP(XP_ACAO.masd, 'masd')
   await ganharBadge('mapeado')
   toast('✅ MASD salvo! +25 XP · Badge Mapeado desbloqueado!')
   _consAba = 'mapa'
   renderCons(document.getElementById('sub-cons'))
+  }
 }
 
 function renderConsMapa() {
