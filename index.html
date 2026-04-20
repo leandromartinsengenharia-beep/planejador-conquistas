@@ -1269,15 +1269,28 @@ async function rdCons() {
   if (!el) return
   renderCons(el)  // renderiza imediatamente com dados do cache/localStorage
   try {
-    const [rMaas, rMasd] = await Promise.all([
+    const [rPerfil, rMaas, rMasd] = await Promise.all([
+      db.from('usuarios').select('*').eq('id', S.user.id).single(),
       db.from('maas').select('*').eq('user_id', S.user.id).order('created_at', {ascending:false}).limit(1),
       db.from('masd').select('*').eq('user_id', S.user.id).order('created_at', {ascending:false}).limit(1),
     ])
+    // Atualiza perfil com dados frescos do Supabase (merge: Supabase ganha se nao-null)
+    if (rPerfil.data) {
+      const localP = (() => { try { return JSON.parse(localStorage.getItem('core_perfil_' + S.user.id)||'null') } catch { return null } })()
+      if (localP) {
+        const m = { ...localP }
+        Object.entries(rPerfil.data).forEach(([k,v]) => { if (v !== null && v !== undefined) m[k] = v })
+        S.perfil = m
+      } else {
+        S.perfil = rPerfil.data
+      }
+      localStorage.setItem('core_perfil_' + S.user.id, JSON.stringify(S.perfil))
+    }
     let atualizado = false
     if (rMaas.data?.length) { _maasData = rMaas.data[0].dados || {}; atualizado = true }
     else { try { const lf=JSON.parse(localStorage.getItem(`core_ferr_${S.user?.id||'guest'}_f06`)||'null'); if(lf) { _maasData=lf; atualizado=true } } catch{} }
     if (rMasd.data?.length) { _masdData = rMasd.data[0].dados || {}; atualizado = true }
-    if (atualizado) renderCons(el)  // atualiza com dados reais do servidor
+    if (atualizado || rPerfil.data) renderCons(el)  // re-renderiza com dados frescos
   } catch(e) { console.error('rdCons load error:', e) }
 }
 
