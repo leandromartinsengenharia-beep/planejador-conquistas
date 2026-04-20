@@ -1433,7 +1433,22 @@ async function sincronizarDispositivoManual() {
     }
   } catch(e) { console.warn('jornada sync manual error:', e) }
 
-  if (count > 0) toast('✅ ' + count + ' itens sincronizados com sucesso!')
+  // 3. Perfil: sincronizar dados pessoais
+  try {
+    const localPerfil = JSON.parse(localStorage.getItem('core_perfil_' + S.user.id) || 'null')
+    if (localPerfil && Object.keys(localPerfil).length > 0) {
+      const perfilPayload = {}
+      const camposPerfil = ['nome','instagram','profissao','nascimento','declaracao_assinada','declaracao_data','xp','badges']
+      camposPerfil.forEach(k => { if (localPerfil[k] !== undefined && localPerfil[k] !== null) perfilPayload[k] = localPerfil[k] })
+      if (Object.keys(perfilPayload).length > 0) {
+        const { error: spErr } = await db.from('usuarios').update(perfilPayload).eq('id', S.user.id)
+        if (spErr) console.warn('perfil sync error:', spErr.message)
+        else count++
+      }
+    }
+  } catch(e) { console.warn('perfil sync manual error:', e) }
+
+  if (count > 0) toast('✅ Dados sincronizados com sucesso!')
   else toast('ℹ️ Nenhum dado novo encontrado neste dispositivo')
 }
 
@@ -1455,11 +1470,14 @@ async function salvarPerfil() {
   S.perfil = { ...(S.perfil||{}), ...payload }
   localStorage.setItem('core_perfil_' + S.user.id, JSON.stringify(S.perfil))
   document.getElementById('user-name').textContent = nome
-  toast('✅ Perfil salvo!')
-  // Sincroniza Supabase em background (erro nao bloqueia o usuario)
-  db.from('usuarios').update(payload).eq('id', S.user.id).then(({ error }) => {
-    if (error) console.warn('perfil supabase sync:', error.message)
-  })
+  // Sincroniza com Supabase (aguarda para confirmar)
+  const { error: peErr } = await db.from('usuarios').update(payload).eq('id', S.user.id)
+  if (peErr) {
+    toast('✅ Perfil salvo localmente ⚠️ sync pendente: ' + peErr.message)
+    console.warn('perfil supabase sync:', peErr.message)
+  } else {
+    toast('✅ Perfil salvo e sincronizado!')
+  }
   // Verifica aniversário
   if (nascimento) {
     const hoje = new Date(), d = new Date(nascimento)
