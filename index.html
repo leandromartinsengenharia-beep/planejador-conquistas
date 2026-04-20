@@ -1063,7 +1063,16 @@ async function afterLogin() {
   try {
   // load perfil
   const { data } = await db.from('usuarios').select('*').eq('id', S.user.id).single()
-  S.perfil = data
+  // Carrega perfil local (pode ter dados extras que ainda nao existem no Supabase)
+  const localPerfil = (() => { try { return JSON.parse(localStorage.getItem('core_perfil_' + S.user.id)||'null') } catch { return null } })()
+  if (localPerfil && data) {
+    // Merge: Supabase prevalece APENAS se o valor nao for null/undefined
+    const merged = { ...localPerfil }
+    Object.entries(data).forEach(([k, v]) => { if (v !== null && v !== undefined) merged[k] = v })
+    S.perfil = merged
+  } else {
+    S.perfil = data || localPerfil || {}
+  }
   const nome = S.perfil?.nome || S.user.email
   document.getElementById('user-name').textContent = nome
   atualizarXPSidebar()
@@ -1442,11 +1451,15 @@ async function salvarPerfil() {
   }
   const payload = { nome, instagram, profissao }
   if (nascimento) payload.nascimento = nascimento
-  const { error } = await db.from('usuarios').update(payload).eq('id', S.user.id)
-  if (error) { toast('Erro ao salvar: ' + error.message, false); return }
-  S.perfil = { ...S.perfil, ...payload }
+  // Salva localmente IMEDIATAMENTE (funciona offline e sem colunas no Supabase)
+  S.perfil = { ...(S.perfil||{}), ...payload }
+  localStorage.setItem('core_perfil_' + S.user.id, JSON.stringify(S.perfil))
   document.getElementById('user-name').textContent = nome
-  toast('✅ Perfil salvo com sucesso!')
+  toast('✅ Perfil salvo!')
+  // Sincroniza Supabase em background (erro nao bloqueia o usuario)
+  db.from('usuarios').update(payload).eq('id', S.user.id).then(({ error }) => {
+    if (error) console.warn('perfil supabase sync:', error.message)
+  })
   // Verifica aniversário
   if (nascimento) {
     const hoje = new Date(), d = new Date(nascimento)
@@ -2100,9 +2113,13 @@ async function baixarImagemPost() {
 
 async function assinarDeclaracao() {
   const now = new Date().toISOString()
-  const { error } = await db.from('usuarios').update({ declaracao_assinada: true, declaracao_data: now }).eq('id', S.user.id)
-  if (error) { toast('Erro: ' + error.message, false); return }
-  S.perfil = { ...S.perfil, declaracao_assinada: true, declaracao_data: now }
+  // Salva localmente imediatamente
+  S.perfil = { ...(S.perfil||{}), declaracao_assinada: true, declaracao_data: now }
+  localStorage.setItem('core_perfil_' + S.user.id, JSON.stringify(S.perfil))
+  // Supabase em background
+  db.from('usuarios').update({ declaracao_assinada: true, declaracao_data: now }).eq('id', S.user.id).then(({ error }) => {
+    if (error) console.warn('declaracao supabase sync:', error.message)
+  })
   await addXP(XP_ACAO.declaracao, 'declaracao')
   await ganharBadge('declarado')
   dispararFogos(3000)
